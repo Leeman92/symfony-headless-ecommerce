@@ -1,0 +1,31 @@
+# Ignore files that shouldn't be copied to Docker context
+.git
+.gitignore
+README.md
+.env.local
+.env.*.local
+/var/
+/vendor/
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker files
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+/phpunit.xml
+.phpunit.result.cache
+/coverage/
+
+# Performance results
+/performance-results/

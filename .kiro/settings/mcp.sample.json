@@ -1,0 +1,67 @@
+{
+    "mcpServers": {
+        "fetch": {
+            "command": "uvx",
+            "args": [
+                "mcp-server-fetch"
+            ],
+            "env": {},
+            "disabled": false,
+            "autoApprove": []
+        },
+        "postgres": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@henkey/postgres-mcp-server",
+                "--connection-string",
+                "CONNECTION_STRING"
+            ],
+            "disabled": false,
+            "autoApprove": [
+                "query",
+                "schema"
+            ]
+        },
+        "docker": {
+            "command": "uvx",
+            "args": [
+                "mcp-server-docker"
+            ],
+            "env": {
+                "DOCKER_HOST": "unix:///var/run/docker.sock"
+            },
+            "disabled": false,
+            "autoApprove": [
+                "ps",
+                "logs",
+                "inspect"
+            ]
+        },
+        "github": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_PERSONAL_ACCESS_TOKEN=GITHUB_TOKEN",
+                "ghcr.io/github/github-mcp-server"
+            ],
+            "disabled": false
+        },
+        "web-search": {
+            "command": "uvx",
+            "args": [
+                "mcp-brave-search"
+            ],
+            "env": {
+                "BRAVE_API_KEY": "BRAVE_TOKEN"
+            },
+            "disabled": false,
+            "autoApprove": [
+                "search"
+            ]
+        }
+    }
+}

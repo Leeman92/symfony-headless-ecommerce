@@ -1,0 +1,7 @@
+# API Routes will be defined in controllers using annotations
+# This file can be used for global route configuration if needed
+
+api:
+    resource: ../src/Infrastructure/Controller/
+    type: attribute
+    prefix: /api

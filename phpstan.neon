@@ -1,0 +1,36 @@
+includes:
+    - vendor/phpstan/phpstan-symfony/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - src/Kernel.php
+        - tests/bootstrap.php
+    
+    # Symfony specific configuration
+    symfony:
+        container_xml_path: var/cache/dev/App_KernelDevDebugContainer.xml
+        console_application_loader: tests/console-application.php
+    
+    # Ignore Doctrine repository compatibility issues
+    ignoreErrors:
+        - '#Call to an undefined method App\\Domain\\Repository\\RepositoryInterface::#'
+        - '#Method .* should return .* but returns Doctrine\\ORM\\QueryBuilder#'
+        - '#Parameter .* of method .* expects .*, .* given#'
+    
+    # Check for missing type hints
+    checkMissingIterableValueType: true
+    checkGenericClassInNonGenericObjectType: false
+    
+    # Strict rules
+    strictRules:
+        allRules: false
+        booleansInConditions: true
+        uselessCast: true
+        requireParentConstructorCall: true
+        disallowedLooseComparison: true
+        noVariableVariables: true
+        strictCalls: true

@@ -1,0 +1,5 @@
+# Development-specific service configuration
+services:
+    # Performance monitoring with detailed logging in development
+    App\Infrastructure\Monitoring\QueryCounter:
+        public: true

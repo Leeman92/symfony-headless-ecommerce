@@ -1,0 +1,91 @@
+FROM php:8.4-fpm-alpine
+
+# Arguments for user ID and group ID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    libpng-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    postgresql-dev \
+    icu-dev \
+    oniguruma-dev \
+    shadow
+
+# Install PHP extensions
+RUN docker-php-ext-configure intl
+RUN docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    intl \
+    opcache
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy composer files (composer.lock is optional)
+COPY composer.json ./
+COPY composer.loc[k] ./
+
+# Install dependencies - will create composer.lock if it doesn't exist
+RUN composer install --no-scripts --no-autoloader --no-dev --prefer-dist
+
+# Copy application code
+COPY . .
+
+# Fix git ownership issue for Composer
+RUN git config --global --add safe.directory /var/www/html || true
+
+# Install all dependencies including dev for development
+RUN composer install --prefer-dist --optimize-autoloader
+
+# Generate optimized autoloader
+RUN composer dump-autoload --optimize
+
+# Create user with host UID/GID for development
+RUN if [ ${USER_ID:-0} -ne 0 ] && [ ${GROUP_ID:-0} -ne 0 ]; then \
+    # Check if UID already exists and remove it if it's not www-data
+    if getent passwd ${USER_ID} >/dev/null && [ "$(getent passwd ${USER_ID} | cut -d: -f1)" != "www-data" ]; then \
+        deluser $(getent passwd ${USER_ID} | cut -d: -f1) || true; \
+    fi && \
+    # Check if GID already exists and remove it if it's not www-data
+    if getent group ${GROUP_ID} >/dev/null && [ "$(getent group ${GROUP_ID} | cut -d: -f1)" != "www-data" ]; then \
+        delgroup $(getent group ${GROUP_ID} | cut -d: -f1) || true; \
+    fi && \
+    # Update www-data to use host UID/GID
+    groupmod -g ${GROUP_ID} www-data && \
+    usermod -u ${USER_ID} www-data \
+;fi
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html
+RUN chmod -R 755 /var/www/html
+
+# PHP-FPM configuration for intentional performance issues (Phase 1)
+RUN echo "pm = dynamic" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.max_children = 5" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.start_servers = 2" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.min_spare_servers = 1" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.max_spare_servers = 3" >> /usr/local/etc/php-fpm.d/www.conf
+
+# OPcache configuration (basic for Phase 1)
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.memory_consumption=64" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.max_accelerated_files=2000" >> /usr/local/etc/php/conf.d/opcache.ini
+
+EXPOSE 9000
+
+CMD ["php-fpm"]

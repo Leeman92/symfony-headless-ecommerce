@@ -1,0 +1,34 @@
+# Dynamic configuration for Traefik
+http:
+  middlewares:
+    # HTTPS redirect middleware
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    
+    # Security headers middleware
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: false
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+
+# TLS configuration for local development
+tls:
+  certificates:
+    - certFile: /etc/traefik/dynamic/certs/ecommerce.localhost.crt
+      keyFile: /etc/traefik/dynamic/certs/ecommerce.localhost.key
+      stores:
+        - default
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/dynamic/certs/ecommerce.localhost.crt
+        keyFile: /etc/traefik/dynamic/certs/ecommerce.localhost.key

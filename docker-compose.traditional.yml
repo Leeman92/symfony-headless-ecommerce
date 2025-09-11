@@ -1,0 +1,63 @@
+services:
+  # Phase 1: Traditional Nginx + PHP-FPM
+  nginx-traditional:
+    image: nginx:1.24-alpine
+    container_name: ecommerce-nginx-traditional
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - .:/var/www/html
+    depends_on:
+      - php-fpm-traditional
+    networks:
+      - ecommerce-network
+    labels:
+      - "traefik.enable=true"
+      # HTTPS-only router
+      - "traefik.http.routers.traditional.rule=Host(`traditional.ecommerce.localhost`)"
+      - "traefik.http.routers.traditional.entrypoints=websecure"
+      - "traefik.http.routers.traditional.tls=true"
+      - "traefik.http.routers.traditional.middlewares=security-headers@file"
+      - "traefik.http.services.traditional.loadbalancer.server.port=80"
+      # Redirect HTTP to HTTPS
+      - "traefik.http.routers.traditional-redirect.rule=Host(`traditional.ecommerce.localhost`)"
+      - "traefik.http.routers.traditional-redirect.entrypoints=web"
+      - "traefik.http.routers.traditional-redirect.middlewares=https-redirect@file"
+
+  php-fpm-traditional:
+    build:
+      context: .
+      dockerfile: docker/php-fpm/Dockerfile.traditional
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: ecommerce-php-traditional
+    volumes:
+      # Bind mount source code for development
+      - .:/var/www/html
+      # Use named volume for vendor to persist dependencies
+      - vendor_data:/var/www/html/vendor
+    environment:
+      - APP_ENV=dev
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ecommerce?serverVersion=16&charset=utf8
+      - REDIS_URL=redis://redis:6379
+      - DEPLOYMENT_PHASE=phase-1-traditional
+    networks:
+      - ecommerce-network
+
+  # Load testing service (disabled by default)
+  artillery:
+    image: artilleryio/artillery:latest
+    container_name: ecommerce-artillery
+    volumes:
+      - ./load-tests:/tests
+    profiles:
+      - testing
+    networks:
+      - ecommerce-network
+
+volumes:
+  vendor_data:
+
+networks:
+  ecommerce-network:
+    driver: bridge

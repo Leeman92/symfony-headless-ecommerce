@@ -1,0 +1,69 @@
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/.env.*
+/.env
+!/.env.dist
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+.phpunit.result.cache
+###< phpunit/phpunit ###
+
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###
+
+# Performance testing results
+/performance-results/
+/load-test-results/
+
+# IDE files
+/.idea/
+/.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+/docker/postgres/data/
+
+# Logs
+/var/log/
+*.log
+
+# Cache
+/var/cache/
+/.php-cs-fixer.cache
+
+# Coverage reports
+/coverage/
+/clover.xml
+
+# Node modules (if using frontend tooling)
+/node_modules/
+/public/build/
+
+# Composer
+/composer.phar
+
+# Code Quality Tools
+/.php-cs-fixer.cache
+/phpstan.cache
+/.phpstan.result.cache
+
+# Files with secrets
+/.kiro/settings/mcp.json
+###> symfony/phpunit-bridge ###
+.phpunit.result.cache
+/phpunit.xml
+###< symfony/phpunit-bridge ###
