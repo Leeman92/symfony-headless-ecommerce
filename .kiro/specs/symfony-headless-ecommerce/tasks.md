@@ -9,28 +9,28 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Configure environment variables and basic services
   - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 2. Implement core data models and validation
-- [ ] 2.1 Create core entity interfaces and base classes
+- [x] 2. Implement core data models and validation
+- [x] 2.1 Create core entity interfaces and base classes
   - Write base entity interfaces for common functionality
   - Implement timestampable and identifiable traits
   - Create custom Doctrine types for enhanced PostgreSQL support
   - _Requirements: 7.1, 7.4_
 
-- [ ] 2.2 Implement User entity with authentication
+- [x] 2.2 Implement User entity with authentication
   - Create User entity with Doctrine annotations
   - Implement password hashing and validation
   - Add user roles and permissions structure
   - Write unit tests for User entity validation
   - _Requirements: 6.1, 6.2_
 
-- [ ] 2.3 Implement Product entity with PostgreSQL JSON support
+- [x] 2.3 Implement Product entity with PostgreSQL JSON support
   - Create Product entity with JSONB columns for attributes and variants
   - Implement product validation and business rules
   - Add category relationship and stock management
   - Write unit tests for product data validation and JSON handling
   - _Requirements: 1.1, 1.5, 7.1_
 
-- [ ] 2.4 Implement Order and Payment entities with guest support
+- [x] 2.4 Implement Order and Payment entities with guest support
   - Create Order entity with optional customer relationship (nullable for guests)
   - Add guest customer information fields (email, name, address)
   - Implement Payment entity with Stripe integration fields

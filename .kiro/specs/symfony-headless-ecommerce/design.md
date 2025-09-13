@@ -312,7 +312,76 @@ class ProductRepository extends ServiceEntityRepository
 
 ## Data Models
 
-### Core Entities
+### Domain-Driven Design with Value Objects
+
+The system follows Domain-Driven Design principles with extensive use of value objects to create a rich, expressive domain model that prevents primitive obsession and encapsulates business rules.
+
+#### Core Value Objects
+
+```php
+// Money value object for all monetary amounts
+final readonly class Money
+{
+    public function __construct(
+        private string $amount,
+        private string $currency = 'USD'
+    ) {}
+    
+    public function add(Money $other): self { /* ... */ }
+    public function subtract(Money $other): self { /* ... */ }
+    public function multiply(float $multiplier): self { /* ... */ }
+    public function format(): string { /* $99.99, €99.99, etc. */ }
+}
+
+// Email value object with validation
+final readonly class Email
+{
+    public function __construct(private string $value) {
+        // Validation in constructor
+    }
+    
+    public function getDomain(): string { /* ... */ }
+    public function getLocalPart(): string { /* ... */ }
+}
+
+// PersonName value object
+final readonly class PersonName
+{
+    public function __construct(
+        private string $firstName,
+        private string $lastName
+    ) {}
+    
+    public function getFullName(): string { /* ... */ }
+    public function getInitials(): string { /* ... */ }
+}
+
+// Address value object
+final readonly class Address
+{
+    public function __construct(
+        private string $street,
+        private string $city,
+        private string $state,
+        private string $postalCode,
+        private string $country
+    ) {}
+    
+    public function getFormattedAddress(): string { /* ... */ }
+    public function isInCountry(string $countryCode): bool { /* ... */ }
+}
+
+// OrderNumber value object with generation strategies
+final readonly class OrderNumber
+{
+    public function __construct(private string $value) {}
+    
+    public static function generate(): self { /* ORD-20241213-001 */ }
+    public function getYear(): ?string { /* ... */ }
+}
+```
+
+### Core Entities with Value Objects
 
 #### Product Entity (Leveraging PostgreSQL JSON Support)
 ```php
@@ -331,8 +400,9 @@ class Product
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
     
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private ?string $price = null;
+    // Using Money value object instead of primitive string
+    #[ORM\Embedded(class: Money::class)]
+    private Money $price;
     
     #[ORM\Column]
     private ?int $stock = null;
@@ -356,10 +426,26 @@ class Product
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $metadata = null; // SEO tags, custom fields, etc.
     
+    public function __construct(
+        string $name,
+        Money $price,
+        Category $category
+    ) {
+        $this->name = $name;
+        $this->price = $price;
+        $this->category = $category;
+    }
+    
+    // Business methods using value objects
+    public function calculateDiscountedPrice(float $discountPercentage): Money
+    {
+        return $this->price->multiply(1 - ($discountPercentage / 100));
+    }
+    
     // Getters and setters..
 ```
 
-#### Order Entity
+#### Order Entity with Value Objects
 ```php
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: 'orders')]
@@ -370,15 +456,43 @@ class Order
     #[ORM\Column]
     private ?int $id = null;
     
+    // Using OrderNumber value object
+    #[ORM\Embedded(class: OrderNumber::class)]
+    private OrderNumber $orderNumber;
+    
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)] // Nullable for guest orders
     private ?User $customer = null;
     
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private ?string $total = null;
+    // Guest customer information using value objects
+    #[ORM\Embedded(class: Email::class)]
+    private ?Email $guestEmail = null;
+    
+    #[ORM\Embedded(class: PersonName::class)]
+    private ?PersonName $guestName = null;
+    
+    // Using Money value objects for all monetary amounts
+    #[ORM\Embedded(class: Money::class)]
+    private Money $subtotal;
+    
+    #[ORM\Embedded(class: Money::class)]
+    private Money $taxAmount;
+    
+    #[ORM\Embedded(class: Money::class)]
+    private Money $shippingAmount;
+    
+    #[ORM\Embedded(class: Money::class)]
+    private Money $total;
     
     #[ORM\Column(length: 50)]
     private ?string $status = null;
+    
+    // Using Address value objects
+    #[ORM\Embedded(class: Address::class)]
+    private ?Address $billingAddress = null;
+    
+    #[ORM\Embedded(class: Address::class)]
+    private ?Address $shippingAddress = null;
     
     #[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderItem::class, cascade: ['persist'])]
     private Collection $items;
@@ -389,11 +503,39 @@ class Order
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
     
+    public function __construct(OrderNumber $orderNumber)
+    {
+        $this->orderNumber = $orderNumber;
+        $this->subtotal = Money::zero();
+        $this->taxAmount = Money::zero();
+        $this->shippingAmount = Money::zero();
+        $this->total = Money::zero();
+        $this->items = new ArrayCollection();
+    }
+    
+    // Business methods using value objects
+    public function calculateTotal(): void
+    {
+        $this->total = $this->subtotal
+            ->add($this->taxAmount)
+            ->add($this->shippingAmount);
+    }
+    
+    public function isGuestOrder(): bool
+    {
+        return $this->customer === null;
+    }
+    
+    public function getCustomerEmail(): ?Email
+    {
+        return $this->customer?->getEmail() ?? $this->guestEmail;
+    }
+    
     // Getters and setters...
 }
 ```
 
-#### Payment Entity
+#### Payment Entity with Value Objects
 ```php
 #[ORM\Entity(repositoryClass: PaymentRepository::class)]
 #[ORM\Table(name: 'payments')]
@@ -411,11 +553,12 @@ class Payment
     #[ORM\Column(length: 255)]
     private ?string $stripePaymentIntentId = null;
     
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private ?string $amount = null;
+    // Using Money value object for payment amounts
+    #[ORM\Embedded(class: Money::class)]
+    private Money $amount;
     
-    #[ORM\Column(length: 3)]
-    private ?string $currency = null;
+    #[ORM\Embedded(class: Money::class)]
+    private Money $refundedAmount;
     
     #[ORM\Column(length: 50)]
     private ?string $status = null; // pending, succeeded, failed, canceled
@@ -428,6 +571,43 @@ class Payment
     
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $paidAt = null;
+    
+    public function __construct(
+        Order $order,
+        string $stripePaymentIntentId,
+        Money $amount
+    ) {
+        $this->order = $order;
+        $this->stripePaymentIntentId = $stripePaymentIntentId;
+        $this->amount = $amount;
+        $this->refundedAmount = Money::zero($amount->getCurrency());
+        $this->status = 'pending';
+        $this->createdAt = new \DateTime();
+    }
+    
+    // Business methods using value objects
+    public function addRefund(Money $refundAmount): void
+    {
+        $newRefundedAmount = $this->refundedAmount->add($refundAmount);
+        
+        if ($newRefundedAmount->isGreaterThan($this->amount)) {
+            throw new InvalidArgumentException('Refund amount exceeds payment amount');
+        }
+        
+        $this->refundedAmount = $newRefundedAmount;
+        
+        // Update status based on refund amount
+        if ($this->refundedAmount->equals($this->amount)) {
+            $this->status = 'refunded';
+        } else {
+            $this->status = 'partially_refunded';
+        }
+    }
+    
+    public function getRemainingAmount(): Money
+    {
+        return $this->amount->subtract($this->refundedAmount);
+    }
     
     // Getters and setters...
 }

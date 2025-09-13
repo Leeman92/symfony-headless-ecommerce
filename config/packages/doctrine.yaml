@@ -10,6 +10,9 @@ doctrine:
         # Use JSONB for better performance with JSON data
         types:
             json: Doctrine\DBAL\Types\JsonType
+            jsonb: App\Domain\Type\JsonbType
+            uuid: App\Domain\Type\UuidType
+            email: App\Domain\Type\EmailType
             
         # Enable query logging in development
         logging: '%kernel.debug%'

@@ -1,0 +1,251 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Unit\Domain\Entity;
+
+use App\Domain\Entity\Category;
+use App\Domain\Entity\Product;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Unit tests for Product entity
+ */
+final class ProductTest extends TestCase
+{
+    private Category $category;
+    private Product $product;
+
+    protected function setUp(): void
+    {
+        $this->category = new Category('Electronics', Slug::fromString('electronics'));
+        $this->product = new Product(
+            'Test Product',
+            'test-product',
+            '99.99',
+            $this->category
+        );
+    }
+
+    public function testProductCreation(): void
+    {
+        self::assertSame('Test Product', $this->product->getName());
+        self::assertSame('test-product', $this->product->getSlug());
+        self::assertSame('99.99', $this->product->getPrice());
+        self::assertSame(99.99, $this->product->getPriceAsFloat());
+        self::assertSame($this->category, $this->product->getCategory());
+        self::assertTrue($this->product->isActive());
+        self::assertFalse($this->product->isFeatured());
+        self::assertSame(0, $this->product->getStock());
+    }
+
+    public function testPriceHandling(): void
+    {
+        $this->product->setPrice('149.50');
+        
+        self::assertSame('149.50', $this->product->getPrice());
+        self::assertSame(149.50, $this->product->getPriceAsFloat());
+    }
+
+    public function testComparePriceAndDiscount(): void
+    {
+        self::assertNull($this->product->getComparePrice());
+        self::assertNull($this->product->getComparePriceAsFloat());
+        self::assertFalse($this->product->hasDiscount());
+        self::assertNull($this->product->getDiscountPercentage());
+
+        $this->product->setComparePrice('149.99');
+        
+        self::assertSame('149.99', $this->product->getComparePrice());
+        self::assertSame(149.99, $this->product->getComparePriceAsFloat());
+        self::assertTrue($this->product->hasDiscount());
+        self::assertSame(33.34, $this->product->getDiscountPercentage());
+    }
+
+    public function testStockManagement(): void
+    {
+        self::assertSame(0, $this->product->getStock());
+        self::assertFalse($this->product->isInStock());
+
+        $this->product->setStock(10);
+        self::assertSame(10, $this->product->getStock());
+        self::assertTrue($this->product->isInStock());
+
+        $this->product->increaseStock(5);
+        self::assertSame(15, $this->product->getStock());
+
+        $this->product->decreaseStock(7);
+        self::assertSame(8, $this->product->getStock());
+
+        $this->product->decreaseStock(20); // Should not go below 0
+        self::assertSame(0, $this->product->getStock());
+    }
+
+    public function testStockTrackingDisabled(): void
+    {
+        $this->product->setTrackStock(false);
+        $this->product->setStock(0);
+        
+        self::assertTrue($this->product->isInStock()); // Should be in stock when tracking disabled
+    }
+
+    public function testLowStockDetection(): void
+    {
+        $this->product->setStock(5);
+        $this->product->setLowStockThreshold(3);
+        
+        self::assertFalse($this->product->isLowStock());
+        
+        $this->product->setStock(2);
+        self::assertTrue($this->product->isLowStock());
+        
+        $this->product->setLowStockThreshold(null);
+        self::assertFalse($this->product->isLowStock()); // No threshold set
+    }
+
+    public function testAttributeHandling(): void
+    {
+        self::assertNull($this->product->getAttributes());
+        self::assertFalse($this->product->hasAttribute('color'));
+        self::assertNull($this->product->getAttribute('color'));
+
+        $this->product->setAttribute('color', 'red');
+        self::assertTrue($this->product->hasAttribute('color'));
+        self::assertSame('red', $this->product->getAttribute('color'));
+
+        $this->product->setAttribute('size', 'large');
+        $attributes = $this->product->getAttributes();
+        self::assertSame(['color' => 'red', 'size' => 'large'], $attributes);
+
+        $this->product->removeAttribute('color');
+        self::assertFalse($this->product->hasAttribute('color'));
+        self::assertTrue($this->product->hasAttribute('size'));
+    }
+
+    public function testVariantHandling(): void
+    {
+        self::assertNull($this->product->getVariants());
+
+        $variant1 = ['color' => 'red', 'size' => 'M', 'sku' => 'TEST-RED-M'];
+        $variant2 = ['color' => 'blue', 'size' => 'L', 'sku' => 'TEST-BLUE-L'];
+
+        $this->product->addVariant($variant1);
+        $this->product->addVariant($variant2);
+
+        $variants = $this->product->getVariants();
+        self::assertCount(2, $variants);
+        self::assertSame($variant1, $variants[0]);
+        self::assertSame($variant2, $variants[1]);
+    }
+
+    public function testImageHandling(): void
+    {
+        self::assertNull($this->product->getImages());
+        self::assertNull($this->product->getPrimaryImage());
+
+        $this->product->addImage('/images/product1.jpg', 'Product image 1', false);
+        $this->product->addImage('/images/product2.jpg', 'Product image 2', true);
+
+        $images = $this->product->getImages();
+        self::assertCount(2, $images);
+
+        $primaryImage = $this->product->getPrimaryImage();
+        self::assertSame('/images/product2.jpg', $primaryImage['url']);
+        self::assertTrue($primaryImage['is_primary']);
+    }
+
+    public function testPrimaryImageFallback(): void
+    {
+        $this->product->addImage('/images/product1.jpg', 'Product image 1', false);
+        $this->product->addImage('/images/product2.jpg', 'Product image 2', false);
+
+        $primaryImage = $this->product->getPrimaryImage();
+        self::assertSame('/images/product1.jpg', $primaryImage['url']); // First image as fallback
+    }
+
+    public function testSeoDataHandling(): void
+    {
+        self::assertNull($this->product->getSeoData());
+        self::assertNull($this->product->getSeoTitle());
+        self::assertNull($this->product->getSeoDescription());
+
+        $this->product->setSeoTitle('SEO Title');
+        $this->product->setSeoDescription('SEO Description');
+
+        self::assertSame('SEO Title', $this->product->getSeoTitle());
+        self::assertSame('SEO Description', $this->product->getSeoDescription());
+
+        $seoData = $this->product->getSeoData();
+        self::assertSame(['title' => 'SEO Title', 'description' => 'SEO Description'], $seoData);
+    }
+
+    public function testAvailabilityForPurchase(): void
+    {
+        $this->product->setIsActive(true);
+        $this->product->setStock(0);
+        self::assertFalse($this->product->isAvailableForPurchase());
+
+        $this->product->setStock(5);
+        self::assertTrue($this->product->isAvailableForPurchase());
+
+        $this->product->setIsActive(false);
+        self::assertFalse($this->product->isAvailableForPurchase());
+    }
+
+    public function testDescriptionHandling(): void
+    {
+        self::assertNull($this->product->getDescription());
+        self::assertNull($this->product->getShortDescription());
+
+        $this->product->setDescription('Full product description');
+        $this->product->setShortDescription('Short description');
+
+        self::assertSame('Full product description', $this->product->getDescription());
+        self::assertSame('Short description', $this->product->getShortDescription());
+    }
+
+    public function testSkuHandling(): void
+    {
+        self::assertNull($this->product->getSku());
+
+        $this->product->setSku('PROD-001');
+        self::assertSame('PROD-001', $this->product->getSku());
+    }
+
+    public function testValidationWithValidData(): void
+    {
+        $category = new Category('Test Category', 'test-category');
+        $product = new Product(
+            'Valid Product',
+            'valid-product',
+            '29.99',
+            $category
+        );
+        
+        self::assertTrue($product->isValid());
+        self::assertEmpty($product->getValidationErrors());
+    }
+
+    public function testValidationWithInvalidData(): void
+    {
+        $category = new Category('Test Category', 'test-category');
+        $product = new Product(
+            '', // Empty name
+            'invalid slug!', // Invalid slug
+            '-10.00', // Negative price
+            $category
+        );
+        
+        self::assertFalse($product->isValid());
+        
+        $errors = $product->getValidationErrors();
+        self::assertArrayHasKey('name', $errors);
+        self::assertArrayHasKey('slug', $errors);
+        self::assertArrayHasKey('price', $errors);
+    }
+
+    public function testToString(): void
+    {
+        self::assertSame('Test Product', (string) $this->product);
+    }
+}
