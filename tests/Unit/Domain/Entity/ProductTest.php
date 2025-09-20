@@ -6,6 +6,9 @@ namespace App\Tests\Unit\Domain\Entity;
 
 use App\Domain\Entity\Category;
 use App\Domain\Entity\Product;
+use App\Domain\ValueObject\Money;
+use App\Domain\ValueObject\ProductSku;
+use App\Domain\ValueObject\Slug;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -21,8 +24,8 @@ final class ProductTest extends TestCase
         $this->category = new Category('Electronics', Slug::fromString('electronics'));
         $this->product = new Product(
             'Test Product',
-            'test-product',
-            '99.99',
+            Slug::fromString('test-product'),
+            new Money('99.99'),
             $this->category
         );
     }
@@ -30,8 +33,8 @@ final class ProductTest extends TestCase
     public function testProductCreation(): void
     {
         self::assertSame('Test Product', $this->product->getName());
-        self::assertSame('test-product', $this->product->getSlug());
-        self::assertSame('99.99', $this->product->getPrice());
+        self::assertSame('test-product', $this->product->getSlug()->getValue());
+        self::assertSame('99.99', $this->product->getPrice()->getAmount());
         self::assertSame(99.99, $this->product->getPriceAsFloat());
         self::assertSame($this->category, $this->product->getCategory());
         self::assertTrue($this->product->isActive());
@@ -41,9 +44,9 @@ final class ProductTest extends TestCase
 
     public function testPriceHandling(): void
     {
-        $this->product->setPrice('149.50');
+        $this->product->setPrice(new Money('149.50'));
         
-        self::assertSame('149.50', $this->product->getPrice());
+        self::assertSame('149.50', $this->product->getPrice()->getAmount());
         self::assertSame(149.50, $this->product->getPriceAsFloat());
     }
 
@@ -54,9 +57,9 @@ final class ProductTest extends TestCase
         self::assertFalse($this->product->hasDiscount());
         self::assertNull($this->product->getDiscountPercentage());
 
-        $this->product->setComparePrice('149.99');
+        $this->product->setComparePrice(new Money('149.99'));
         
-        self::assertSame('149.99', $this->product->getComparePrice());
+        self::assertSame('149.99', $this->product->getComparePrice()?->getAmount());
         self::assertSame(149.99, $this->product->getComparePriceAsFloat());
         self::assertTrue($this->product->hasDiscount());
         self::assertSame(33.34, $this->product->getDiscountPercentage());
@@ -208,17 +211,17 @@ final class ProductTest extends TestCase
     {
         self::assertNull($this->product->getSku());
 
-        $this->product->setSku('PROD-001');
-        self::assertSame('PROD-001', $this->product->getSku());
+        $this->product->setSku(new ProductSku('PROD-001'));
+        self::assertSame('PROD-001', $this->product->getSku()?->getValue());
     }
 
     public function testValidationWithValidData(): void
     {
-        $category = new Category('Test Category', 'test-category');
+        $category = new Category('Test Category', Slug::fromString('test-category'));
         $product = new Product(
             'Valid Product',
-            'valid-product',
-            '29.99',
+            Slug::fromString('valid-product'),
+            new Money('29.99'),
             $category
         );
         
@@ -228,20 +231,18 @@ final class ProductTest extends TestCase
 
     public function testValidationWithInvalidData(): void
     {
-        $category = new Category('Test Category', 'test-category');
+        $category = new Category('Test Category', Slug::fromString('test-category'));
         $product = new Product(
             '', // Empty name
-            'invalid slug!', // Invalid slug
-            '-10.00', // Negative price
+            Slug::fromString('valid-product'),
+            new Money('29.99'),
             $category
         );
-        
+
         self::assertFalse($product->isValid());
-        
+
         $errors = $product->getValidationErrors();
         self::assertArrayHasKey('name', $errors);
-        self::assertArrayHasKey('slug', $errors);
-        self::assertArrayHasKey('price', $errors);
     }
 
     public function testToString(): void

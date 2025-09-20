@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\ValueObject;
 
+use Doctrine\ORM\Mapping as ORM;
 use InvalidArgumentException;
 
 /**
@@ -12,9 +13,13 @@ use InvalidArgumentException;
  * Encapsulates person name validation and behavior according to DDD principles.
  * Ensures names are always in a valid state.
  */
+#[ORM\Embeddable]
 final readonly class PersonName
 {
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
     private string $firstName;
+
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
     private string $lastName;
 
     public function __construct(string $firstName, string $lastName)

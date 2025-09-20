@@ -9,6 +9,7 @@ use App\Domain\ValueObject\PersonName;
 use App\Domain\ValueObject\Phone;
 use App\Infrastructure\Doctrine\Type\EmailType;
 use App\Infrastructure\Doctrine\Type\PhoneType;
+use App\Infrastructure\Repository\UserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -21,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Implements Symfony security interfaces for authentication
  * and provides role-based access control.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
 #[ORM\HasLifecycleCallbacks]
 

@@ -24,7 +24,11 @@ final class UuidType extends GuidType
 
     public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
     {
-        return 'UUID';
+        if ($platform->getName() === 'postgresql') {
+            return 'UUID';
+        }
+
+        return parent::getSQLDeclaration($column, $platform);
     }
 
     public function requiresSQLCommentHint(AbstractPlatform $platform): bool

@@ -63,7 +63,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         $this->product = $product;
         $this->productName = $product->getName();
         $this->productSku = $product->getSku();
-        
+
         if ($unitPrice === null) {
             $this->unitPrice = $product->getPrice();
         } elseif ($unitPrice instanceof Money) {
@@ -71,7 +71,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         } else {
             $this->unitPrice = new Money($unitPrice, $product->getPrice()->getCurrency());
         }
-        
+
         $this->quantity = $quantity;
         $this->calculateTotalPrice();
     }
@@ -109,32 +109,43 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         return $this;
     }
 
-    public function getProductSku(): ?string
+    public function getProductSku(): ?ProductSku
     {
         return $this->productSku;
     }
 
-    public function setProductSku(?string $productSku): static
+    public function setProductSku(ProductSku|string|null $productSku): static
     {
-        $this->productSku = $productSku;
+        if ($productSku === null) {
+            $this->productSku = null;
+        } elseif ($productSku instanceof ProductSku) {
+            $this->productSku = $productSku;
+        } else {
+            $this->productSku = new ProductSku($productSku);
+        }
         return $this;
     }
 
-    public function getUnitPrice(): string
+    public function getUnitPrice(): Money
     {
         return $this->unitPrice;
     }
 
-    public function setUnitPrice(string $unitPrice): static
+    public function setUnitPrice(Money|string $unitPrice): static
     {
-        $this->unitPrice = $unitPrice;
+        if ($unitPrice instanceof Money) {
+            $this->unitPrice = $unitPrice;
+        } else {
+            $this->unitPrice = new Money($unitPrice, $this->unitPrice->getCurrency());
+        }
+
         $this->calculateTotalPrice();
         return $this;
     }
 
     public function getUnitPriceAsFloat(): float
     {
-        return (float) $this->unitPrice;
+        return $this->unitPrice->getAmountAsFloat();
     }
 
     public function getQuantity(): int
@@ -149,26 +160,29 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         return $this;
     }
 
-    public function getTotalPrice(): string
+    public function getTotalPrice(): Money
     {
         return $this->totalPrice;
     }
 
-    public function setTotalPrice(string $totalPrice): static
+    public function setTotalPrice(Money|string $totalPrice): static
     {
-        $this->totalPrice = $totalPrice;
+        if ($totalPrice instanceof Money) {
+            $this->totalPrice = $totalPrice;
+        } else {
+            $this->totalPrice = new Money($totalPrice, $this->unitPrice->getCurrency());
+        }
         return $this;
     }
 
     public function getTotalPriceAsFloat(): float
     {
-        return (float) $this->totalPrice;
+        return $this->totalPrice->getAmountAsFloat();
     }
 
     public function calculateTotalPrice(): static
     {
-        $total = $this->getUnitPriceAsFloat() * $this->quantity;
-        $this->totalPrice = number_format($total, 2, '.', '');
+        $this->totalPrice = $this->unitPrice->multiply((float) $this->quantity);
         return $this;
     }
 

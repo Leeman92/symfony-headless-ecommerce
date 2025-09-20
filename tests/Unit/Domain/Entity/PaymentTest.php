@@ -32,12 +32,12 @@ final class PaymentTest extends TestCase
     {
         self::assertSame($this->order, $this->payment->getOrder());
         self::assertSame('pi_test123456789', $this->payment->getStripePaymentIntentId());
-        self::assertSame('100.00', $this->payment->getAmount());
+        self::assertSame('100.00', $this->payment->getAmount()->getAmount());
         self::assertSame(100.0, $this->payment->getAmountAsFloat());
         self::assertSame(10000, $this->payment->getAmountInCents());
         self::assertSame('USD', $this->payment->getCurrency());
         self::assertSame(Payment::STATUS_PENDING, $this->payment->getStatus());
-        self::assertSame('0.00', $this->payment->getRefundedAmount());
+        self::assertSame('0.00', $this->payment->getRefundedAmount()->getAmount());
         self::assertTrue($this->payment->isPending());
     }
 
@@ -167,7 +167,7 @@ final class PaymentTest extends TestCase
         $this->payment->setStatus(Payment::STATUS_SUCCEEDED);
         
         self::assertSame(0.0, $this->payment->getRefundedAmountAsFloat());
-        self::assertSame(100.0, $this->payment->getRemainingAmount());
+        self::assertSame(100.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertFalse($this->payment->isFullyRefunded());
         self::assertFalse($this->payment->isPartiallyRefunded());
         self::assertTrue($this->payment->canBeRefunded());
@@ -175,9 +175,9 @@ final class PaymentTest extends TestCase
         // Add partial refund
         $this->payment->addRefund('30.00');
         
-        self::assertSame('30.00', $this->payment->getRefundedAmount());
+        self::assertSame('30.00', $this->payment->getRefundedAmount()->getAmount());
         self::assertSame(30.0, $this->payment->getRefundedAmountAsFloat());
-        self::assertSame(70.0, $this->payment->getRemainingAmount());
+        self::assertSame(70.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertFalse($this->payment->isFullyRefunded());
         self::assertTrue($this->payment->isPartiallyRefunded());
         self::assertTrue($this->payment->isPartiallyRefundedStatus());
@@ -186,8 +186,8 @@ final class PaymentTest extends TestCase
         // Add full refund
         $this->payment->addRefund('70.00');
         
-        self::assertSame('100.00', $this->payment->getRefundedAmount());
-        self::assertSame(0.0, $this->payment->getRemainingAmount());
+        self::assertSame('100.00', $this->payment->getRefundedAmount()->getAmount());
+        self::assertSame(0.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertTrue($this->payment->isFullyRefunded());
         self::assertFalse($this->payment->isPartiallyRefunded());
         self::assertTrue($this->payment->isRefunded());
@@ -210,8 +210,8 @@ final class PaymentTest extends TestCase
         $this->payment->addRefund('25.00');
         $this->payment->addRefund('25.00');
         
-        self::assertSame('75.00', $this->payment->getRefundedAmount());
-        self::assertSame(25.0, $this->payment->getRemainingAmount());
+        self::assertSame('75.00', $this->payment->getRefundedAmount()->getAmount());
+        self::assertSame(25.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertTrue($this->payment->isPartiallyRefunded());
     }
 
@@ -242,10 +242,10 @@ final class PaymentTest extends TestCase
 
     public function testPaymentToString(): void
     {
-        self::assertSame('Payment pi_test123456789 - 100.00 USD', (string) $this->payment);
+        self::assertSame('Payment pi_test123456789 - $100.00', (string) $this->payment);
         
         $this->payment->setCurrency('EUR');
-        self::assertSame('Payment pi_test123456789 - 100.00 EUR', (string) $this->payment);
+        self::assertSame('Payment pi_test123456789 - €100.00', (string) $this->payment);
     }
 
     public function testStripeCustomerIdHandling(): void
