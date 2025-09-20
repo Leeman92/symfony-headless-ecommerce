@@ -58,7 +58,7 @@ WORKDIR /var/www/html
 # Copy composer files (composer.lock is optional)
 COPY composer.json ./
 # Copy lock file if available to leverage Docker layer caching
-COPY composer.lock ./
+COPY composer.loc[k] ./
 
 # Install dependencies - will create composer.lock if it doesn't exist
 RUN composer install --no-scripts --no-autoloader --no-dev --prefer-dist
