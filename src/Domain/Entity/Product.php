@@ -11,6 +11,7 @@ use App\Domain\ValueObject\Slug;
 use App\Infrastructure\Doctrine\Type\MoneyType;
 use App\Infrastructure\Doctrine\Type\ProductSkuType;
 use App\Infrastructure\Doctrine\Type\SlugType;
+use App\Infrastructure\Repository\ProductRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -21,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Represents e-commerce products with flexible attributes and variants
  * stored in PostgreSQL JSONB columns for optimal performance.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\Table(name: 'products')]
 #[ORM\HasLifecycleCallbacks]
 final class Product extends BaseEntity implements ValidatableInterface

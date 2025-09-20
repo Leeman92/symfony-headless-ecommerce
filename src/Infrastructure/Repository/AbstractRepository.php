@@ -6,6 +6,7 @@ namespace App\Infrastructure\Repository;
 
 use App\Domain\Repository\RepositoryInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -32,19 +33,70 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
     }
 
     /**
-     * Find entities by criteria with intentional performance issues for Phase 1
+     * Find entities by criteria with optional sorting
+     * Note: intentionally simple to surface performance refactors later
      */
-    public function findByCriteria(array $criteria): array
+    public function findByCriteria(array $criteria, array $sorting = []): array
     {
         $qb = $this->createQueryBuilder('e');
-        
-        foreach ($criteria as $field => $value) {
-            if ($value !== null) {
-                $qb->andWhere("e.{$field} = :{$field}")
-                   ->setParameter($field, $value);
-            }
-        }
-        
+        $this->applyCriteria($qb, $criteria);
+        $this->applySorting($qb, $sorting);
+
         return $qb->getQuery()->getResult();
+    }
+
+    public function findOneByCriteria(array $criteria, array $sorting = [])
+    {
+        $qb = $this->createQueryBuilder('e');
+        $this->applyCriteria($qb, $criteria);
+        $this->applySorting($qb, $sorting);
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * Apply exact-match filters to a query builder
+     */
+    protected function applyCriteria(QueryBuilder $qb, array $criteria, string $alias = 'e'): void
+    {
+        foreach ($criteria as $field => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            $parameter = str_replace('.', '_', $field);
+
+            if (is_array($value)) {
+                $qb->andWhere(sprintf('%s.%s IN (:%s)', $alias, $field, $parameter))
+                    ->setParameter($parameter, $value);
+                continue;
+            }
+
+            $qb->andWhere(sprintf('%s.%s = :%s', $alias, $field, $parameter))
+                ->setParameter($parameter, $value);
+        }
+    }
+
+    /**
+     * Apply order by clauses from an array of field => direction
+     */
+    protected function applySorting(QueryBuilder $qb, array $sorting, string $alias = 'e'): void
+    {
+        foreach ($sorting as $field => $direction) {
+            $direction = strtoupper((string) $direction) === 'DESC' ? 'DESC' : 'ASC';
+            $qb->addOrderBy(sprintf('%s.%s', $alias, $field), $direction);
+        }
+    }
+
+    /**
+     * Apply simple pagination (1-based page index)
+     */
+    protected function applyPagination(QueryBuilder $qb, int $page, int $limit): void
+    {
+        $limit = max(1, $limit);
+        $page = max(1, $page);
+
+        $qb->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
     }
 }

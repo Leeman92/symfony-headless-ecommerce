@@ -220,31 +220,26 @@ final class UserTest extends TestCase
 
     public function testValidationWithInvalidEmail(): void
     {
-        $user = new User(
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid email format');
+
+        new User(
             'invalid-email',
             'John',
             'Doe'
         );
-        
-        self::assertFalse($user->isValid());
-        
-        $errors = $user->getValidationErrors();
-        self::assertArrayHasKey('email', $errors);
     }
 
     public function testValidationWithEmptyNames(): void
     {
-        $user = new User(
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('First name cannot be empty');
+
+        new User(
             'test@example.com',
             '',
             ''
         );
-        
-        self::assertFalse($user->isValid());
-        
-        $errors = $user->getValidationErrors();
-        self::assertArrayHasKey('firstName', $errors);
-        self::assertArrayHasKey('lastName', $errors);
     }
 
     public function testEraseCredentials(): void

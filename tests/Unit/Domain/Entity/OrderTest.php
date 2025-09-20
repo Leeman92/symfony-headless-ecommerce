@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Entity;
 
+use App\Domain\Entity\Category;
 use App\Domain\Entity\Order;
 use App\Domain\Entity\OrderItem;
 use App\Domain\Entity\Payment;
 use App\Domain\Entity\Product;
 use App\Domain\Entity\User;
-use App\Domain\Entity\Category;
 use App\Domain\ValueObject\Address;
 use App\Domain\ValueObject\Email;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\OrderNumber;
 use App\Domain\ValueObject\PersonName;
 use App\Domain\ValueObject\Phone;
+use App\Domain\ValueObject\Slug;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -219,8 +220,8 @@ final class OrderTest extends TestCase
 
     public function testOrderItemsManagement(): void
     {
-        $category = new Category('Electronics', 'electronics');
-        $product = new Product('Test Product', 'test-product', '99.99', $category);
+        $category = new Category('Electronics', Slug::fromString('electronics'));
+        $product = new Product('Test Product', Slug::fromString('test-product'), new Money('99.99'), $category);
         $orderItem = new OrderItem($product, 2);
 
         self::assertSame(0, $this->order->getItemsCount());
@@ -256,11 +257,11 @@ final class OrderTest extends TestCase
     public function testOrderValidation(): void
     {
         // Test valid order
-        $this->order->setGuestEmail('test@example.com');
+        $this->order->setGuestEmail(new Email('test@example.com'));
         $this->order->setGuestFirstName('John');
         $this->order->setGuestLastName('Doe');
-        $this->order->setSubtotal('100.00');
-        $this->order->setTotal('100.00');
+        $this->order->setSubtotal(new Money('100.00'));
+        $this->order->setTotal(new Money('100.00'));
 
         self::assertTrue($this->order->isValid());
         self::assertEmpty($this->order->getValidationErrors());

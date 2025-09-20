@@ -16,6 +16,7 @@ use App\Infrastructure\Doctrine\Type\EmailType;
 use App\Infrastructure\Doctrine\Type\MoneyType;
 use App\Infrastructure\Doctrine\Type\OrderNumberType;
 use App\Infrastructure\Doctrine\Type\PhoneType;
+use App\Infrastructure\Repository\OrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -28,7 +29,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Represents e-commerce orders with support for both authenticated users
  * and guest customers. Guest information is stored directly in the order.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: 'orders')]
 #[ORM\HasLifecycleCallbacks]
 final class Order extends BaseEntity implements ValidatableInterface

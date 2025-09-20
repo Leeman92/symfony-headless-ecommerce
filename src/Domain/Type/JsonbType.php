@@ -24,7 +24,23 @@ final class JsonbType extends JsonType
 
     public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
     {
-        return 'JSONB';
+        // Use native JSONB on PostgreSQL, otherwise fall back to the platform JSON declaration
+        $platformName = $platform->getName();
+
+        if ($platformName === 'postgresql') {
+            return 'JSONB';
+        }
+
+        if (method_exists($platform, 'getJsonTypeDeclarationSQL')) {
+            return $platform->getJsonTypeDeclarationSQL($column);
+        }
+
+        // SQLite and other lightweight platforms map to CLOB via the generic declaration
+        if (method_exists($platform, 'getClobTypeDeclarationSQL')) {
+            return $platform->getClobTypeDeclarationSQL($column);
+        }
+
+        return parent::getSQLDeclaration($column, $platform);
     }
 
     public function requiresSQLCommentHint(AbstractPlatform $platform): bool
