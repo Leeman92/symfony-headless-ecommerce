@@ -1,0 +1,15 @@
+{
+    "_readme": [
+        "Stub lock file generated for Docker build layer caching"
+    ],
+    "packages": [],
+    "packages-dev": [],
+    "content-hash": "00000000000000000000000000000000",
+    "minimum-stability": "stable",
+    "stability-flags": {},
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "platform-overrides": []
+}
