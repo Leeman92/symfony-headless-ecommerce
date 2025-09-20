@@ -30,8 +30,12 @@ final class SlugType extends StringType
             return null;
         }
 
+        if (is_string($value)) {
+            $value = new Slug($value);
+        }
+
         if (!$value instanceof Slug) {
-            throw new \InvalidArgumentException('Expected Slug value object');
+            throw new \InvalidArgumentException('Expected Slug value object or string');
         }
 
         return $value->getValue();

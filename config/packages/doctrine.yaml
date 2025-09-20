@@ -12,7 +12,13 @@ doctrine:
             json: Doctrine\DBAL\Types\JsonType
             jsonb: App\Domain\Type\JsonbType
             uuid: App\Domain\Type\UuidType
-            email: App\Domain\Type\EmailType
+            email: App\Infrastructure\Doctrine\Type\EmailType
+            phone: App\Infrastructure\Doctrine\Type\PhoneType
+            money: App\Infrastructure\Doctrine\Type\MoneyType
+            slug: App\Infrastructure\Doctrine\Type\SlugType
+            address: App\Infrastructure\Doctrine\Type\AddressType
+            order_number: App\Infrastructure\Doctrine\Type\OrderNumberType
+            product_sku: App\Infrastructure\Doctrine\Type\ProductSkuType
             
         # Enable query logging in development
         logging: '%kernel.debug%'
@@ -20,7 +26,7 @@ doctrine:
 
     orm:
         auto_generate_proxy_classes: true
-        enable_lazy_ghost_objects: true
+        enable_lazy_ghost_objects: false
         report_fields_where_declared: true
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
@@ -33,7 +39,13 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Domain/Entity'
                 prefix: 'App\Domain\Entity'
                 alias: App
-                
+            AppValueObject:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Domain/ValueObject'
+                prefix: 'App\Domain\ValueObject'
+                alias: AppValueObject
+
         # Performance configuration (intentionally basic for Phase 1)
         query_cache_driver:
             type: pool

@@ -93,6 +93,13 @@ final class PaymentService implements PaymentServiceInterface
     public function handleWebhookEvent(Event $event): ?Payment
     {
         $object = $event->data['object'] ?? $event->data->object ?? null;
+
+        if (!$object instanceof PaymentIntent) {
+            if ($object instanceof StripeObject) {
+                $object = PaymentIntent::constructFrom($object->toArray());
+            }
+        }
+
         if (!$object instanceof PaymentIntent) {
             return null;
         }
@@ -205,11 +212,13 @@ final class PaymentService implements PaymentServiceInterface
 
     private function runInTransaction(callable $operation)
     {
-        if (method_exists($this->entityManager, 'wrapInTransaction')) {
-            return $this->entityManager->wrapInTransaction($operation);
+        if (is_callable([$this->entityManager, 'wrapInTransaction'])) {
+            return $this->entityManager->wrapInTransaction(static function () use ($operation) {
+                return $operation();
+            });
         }
 
-        return $this->entityManager->transactional(static function ($em) use ($operation) {
+        return $this->entityManager->transactional(static function () use ($operation) {
             return $operation();
         });
     }

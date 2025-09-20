@@ -52,7 +52,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
         self::METHOD_WALLET,
     ];
 
-    #[ORM\OneToOne(targetEntity: Order::class, inversedBy: 'payment')]
+    #[ORM\OneToOne(targetEntity: Order::class, inversedBy: 'payment', fetch: 'EAGER')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(message: 'Payment must be associated with an order')]
     private ?Order $order = null;

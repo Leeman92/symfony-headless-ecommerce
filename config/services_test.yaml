@@ -1,0 +1,7 @@
+parameters:
+    stripe_webhook_secret: 'whsec_test'
+
+services:
+    App\Tests\Support\Stripe\FakeStripePaymentGateway: ~
+
+    App\Infrastructure\Stripe\StripePaymentGatewayInterface: '@App\Tests\Support\Stripe\FakeStripePaymentGateway'

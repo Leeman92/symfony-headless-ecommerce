@@ -21,9 +21,15 @@ abstract class AbstractEntity implements EntityInterface
     #[ORM\Column(type: 'integer')]
     protected ?int $id = null;
 
+    private ?int $lastKnownId = null;
+
     public function getId(): ?int
     {
-        return $this->id;
+        if ($this->id !== null) {
+            $this->lastKnownId = $this->id;
+        }
+
+        return $this->id ?? $this->lastKnownId;
     }
 
     /**
@@ -31,7 +37,7 @@ abstract class AbstractEntity implements EntityInterface
      */
     public function isPersisted(): bool
     {
-        return $this->id !== null;
+        return $this->getId() !== null;
     }
 
     /**
@@ -39,7 +45,7 @@ abstract class AbstractEntity implements EntityInterface
      */
     public function isNew(): bool
     {
-        return $this->id === null;
+        return $this->getId() === null;
     }
 
     /**

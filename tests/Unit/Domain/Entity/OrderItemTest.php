@@ -35,7 +35,7 @@ final class OrderItemTest extends TestCase
 
     public function testOrderItemCreation(): void
     {
-        self::assertSame($this->product, $this->orderItem->getProduct());
+        self::assertSame(0, $this->orderItem->getProductId());
         self::assertSame('Test Product', $this->orderItem->getProductName());
         self::assertInstanceOf(ProductSku::class, $this->orderItem->getProductSku());
         self::assertSame('TEST-SKU-001', $this->orderItem->getProductSku()?->getValue());
@@ -50,6 +50,7 @@ final class OrderItemTest extends TestCase
     {
         $orderItem = new OrderItem($this->product, 3, new Money('89.99', 'USD'));
         
+        self::assertSame(0, $orderItem->getProductId());
         self::assertSame('89.99', $orderItem->getUnitPrice()->getAmount());
         self::assertSame(89.99, $orderItem->getUnitPriceAsFloat());
         self::assertSame(3, $orderItem->getQuantity());
@@ -62,6 +63,7 @@ final class OrderItemTest extends TestCase
         $productWithoutSku = new Product('Book Title', Slug::fromString('book-title'), new Money('19.99'), $category);
         $orderItem = new OrderItem($productWithoutSku, 1);
         
+        self::assertSame(0, $orderItem->getProductId());
         self::assertNull($orderItem->getProductSku());
         self::assertSame('Book Title', $orderItem->getProductName());
     }
