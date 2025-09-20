@@ -60,15 +60,15 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Write integration tests for order and user data access
   - _Requirements: 1.4, 2.1, 2.3_
 
-- [ ] 4. Build business service layer
-- [ ] 4.1 Implement Product service with basic functionality
+- [x] 4. Build business service layer
+- [x] 4.1 Implement Product service with basic functionality
   - Create ProductService with product management operations
   - Implement product search and filtering logic
   - Add inventory management and stock validation
   - Write unit tests for product business logic
   - _Requirements: 1.1, 1.2, 1.5_
 
-- [ ] 4.2 Implement Order service with guest and user checkout
+- [x] 4.2 Implement Order service with guest and user checkout
   - Create OrderService with order creation for both users and guests
   - Implement guest checkout validation and business rules
   - Add transaction handling for order processing (user and guest)
@@ -76,7 +76,7 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Write unit tests for order business logic covering both checkout types
   - _Requirements: 1.4, 2.4, 6.1_
 
-- [ ] 4.3 Implement Payment service with Stripe integration
+- [x] 4.3 Implement Payment service with Stripe integration
   - Create PaymentService with Stripe API integration
   - Implement payment intent creation and confirmation
   - Add webhook handling for payment status updates
