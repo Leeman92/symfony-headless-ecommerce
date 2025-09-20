@@ -21,10 +21,10 @@ final class UserRepository extends AbstractRepository implements UserRepositoryI
     {
         $value = $email instanceof Email ? $email->getValue() : (string) $email;
 
-        return $this->createQueryBuilder('u')
-            ->andWhere('LOWER(u.email) = :email')
+        return $this->createQueryBuilder('user')
+            ->andWhere('LOWER(user.email) = :email')
             ->setParameter('email', mb_strtolower($value))
-            ->andWhere('u.isActive = :active')
+            ->andWhere('user.isActive = :active')
             ->setParameter('active', true)
             ->getQuery()
             ->getOneOrNullResult();
@@ -32,15 +32,15 @@ final class UserRepository extends AbstractRepository implements UserRepositoryI
 
     public function searchCustomers(?string $term, int $limit = 20): array
     {
-        $qb = $this->createQueryBuilder('u')
-            ->andWhere('u.isActive = :active')
+        $qb = $this->createQueryBuilder('user')
+            ->andWhere('user.isActive = :active')
             ->setParameter('active', true)
-            ->orderBy('u.id', 'DESC')
+            ->orderBy('user.id', 'DESC')
             ->setMaxResults(max(1, $limit));
 
         if ($term !== null && $term !== '') {
             $normalized = '%' . mb_strtolower($term) . '%';
-            $qb->andWhere('LOWER(u.email) LIKE :term OR LOWER(u.name.firstName) LIKE :term OR LOWER(u.name.lastName) LIKE :term')
+            $qb->andWhere('LOWER(user.email) LIKE :term OR LOWER(user.name.firstName) LIKE :term OR LOWER(user.name.lastName) LIKE :term')
                 ->setParameter('term', $normalized);
         }
 
@@ -49,12 +49,12 @@ final class UserRepository extends AbstractRepository implements UserRepositoryI
 
     public function findAdmins(): array
     {
-        return $this->createQueryBuilder('u')
-            ->andWhere('u.roles LIKE :adminRole')
+        return $this->createQueryBuilder('user')
+            ->andWhere('user.roles LIKE :adminRole')
             ->setParameter('adminRole', '%ROLE_ADMIN%')
-            ->andWhere('u.isActive = :active')
+            ->andWhere('user.isActive = :active')
             ->setParameter('active', true)
-            ->orderBy('u.id', 'DESC')
+            ->orderBy('user.id', 'DESC')
             ->getQuery()
             ->getResult();
     }

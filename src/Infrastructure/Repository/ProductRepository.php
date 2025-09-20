@@ -23,20 +23,20 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
 
     public function searchProducts(?string $term, ?string $categorySlug, int $page = 1, int $limit = 20): array
     {
-        $qb = $this->createQueryBuilder('p')
-            ->andWhere('p.isActive = :active')
+        $qb = $this->createQueryBuilder('product')
+            ->andWhere('product.isActive = :active')
             ->setParameter('active', true)
-            ->orderBy('p.id', 'DESC');
+            ->orderBy('product.id', 'DESC');
 
         if ($term !== null && $term !== '') {
             $normalized = '%' . mb_strtolower($term) . '%';
-            $qb->andWhere('LOWER(p.name) LIKE :term OR LOWER(COALESCE(p.description, \'\')) LIKE :term OR LOWER(COALESCE(p.shortDescription, \'\')) LIKE :term')
+            $qb->andWhere('LOWER(product.name) LIKE :term OR LOWER(COALESCE(product.description, \'\')) LIKE :term OR LOWER(COALESCE(product.shortDescription, \'\')) LIKE :term')
                 ->setParameter('term', $normalized);
         }
 
         if ($categorySlug !== null && $categorySlug !== '') {
-            $qb->leftJoin('p.category', 'c')
-                ->andWhere('c.slug = :categorySlug')
+            $qb->leftJoin('product.category', 'category')
+                ->andWhere('category.slug = :categorySlug')
                 ->setParameter('categorySlug', $categorySlug);
         }
 
@@ -54,20 +54,20 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
 
     public function countSearchResults(?string $term, ?string $categorySlug): int
     {
-        $qb = $this->createQueryBuilder('p')
-            ->select('COUNT(p.id)')
-            ->andWhere('p.isActive = :active')
+        $qb = $this->createQueryBuilder('product')
+            ->select('COUNT(product.id)')
+            ->andWhere('product.isActive = :active')
             ->setParameter('active', true);
 
         if ($term !== null && $term !== '') {
             $normalized = '%' . mb_strtolower($term) . '%';
-            $qb->andWhere('LOWER(p.name) LIKE :term OR LOWER(COALESCE(p.description, \'\')) LIKE :term OR LOWER(COALESCE(p.shortDescription, \'\')) LIKE :term')
+            $qb->andWhere('LOWER(product.name) LIKE :term OR LOWER(COALESCE(product.description, \'\')) LIKE :term OR LOWER(COALESCE(product.shortDescription, \'\')) LIKE :term')
                 ->setParameter('term', $normalized);
         }
 
         if ($categorySlug !== null && $categorySlug !== '') {
-            $qb->leftJoin('p.category', 'c')
-                ->andWhere('c.slug = :categorySlug')
+            $qb->leftJoin('product.category', 'category')
+                ->andWhere('category.slug = :categorySlug')
                 ->setParameter('categorySlug', $categorySlug);
         }
 
@@ -76,12 +76,12 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
 
     public function findFeaturedProducts(int $limit = 8): array
     {
-        $qb = $this->createQueryBuilder('p')
-            ->andWhere('p.isActive = :active')
-            ->andWhere('p.isFeatured = :featured')
+        $qb = $this->createQueryBuilder('product')
+            ->andWhere('product.isActive = :active')
+            ->andWhere('product.isFeatured = :featured')
             ->setParameter('active', true)
             ->setParameter('featured', true)
-            ->orderBy('p.id', 'DESC')
+            ->orderBy('product.id', 'DESC')
             ->setMaxResults(max(1, $limit));
 
         $products = $qb->getQuery()->getResult();

@@ -38,7 +38,7 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
      */
     public function findByCriteria(array $criteria, array $sorting = []): array
     {
-        $qb = $this->createQueryBuilder('e');
+        $qb = $this->createQueryBuilder('entity');
         $this->applyCriteria($qb, $criteria);
         $this->applySorting($qb, $sorting);
 
@@ -47,7 +47,7 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
 
     public function findOneByCriteria(array $criteria, array $sorting = [])
     {
-        $qb = $this->createQueryBuilder('e');
+        $qb = $this->createQueryBuilder('entity');
         $this->applyCriteria($qb, $criteria);
         $this->applySorting($qb, $sorting);
 
@@ -57,7 +57,7 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
     /**
      * Apply exact-match filters to a query builder
      */
-    protected function applyCriteria(QueryBuilder $qb, array $criteria, string $alias = 'e'): void
+    protected function applyCriteria(QueryBuilder $qb, array $criteria, string $alias = 'entity'): void
     {
         foreach ($criteria as $field => $value) {
             if ($value === null) {
@@ -80,7 +80,7 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
     /**
      * Apply order by clauses from an array of field => direction
      */
-    protected function applySorting(QueryBuilder $qb, array $sorting, string $alias = 'e'): void
+    protected function applySorting(QueryBuilder $qb, array $sorting, string $alias = 'entity'): void
     {
         foreach ($sorting as $field => $direction) {
             $direction = strtoupper((string) $direction) === 'DESC' ? 'DESC' : 'ASC';

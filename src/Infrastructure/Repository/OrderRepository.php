@@ -22,8 +22,8 @@ final class OrderRepository extends AbstractRepository implements OrderRepositor
     {
         $value = $orderNumber instanceof OrderNumber ? $orderNumber->getValue() : (string) $orderNumber;
 
-        return $this->createQueryBuilder('o')
-            ->andWhere('o.orderNumber = :orderNumber')
+        return $this->createQueryBuilder('orderRecord')
+            ->andWhere('orderRecord.orderNumber = :orderNumber')
             ->setParameter('orderNumber', $value)
             ->getQuery()
             ->getOneOrNullResult();
@@ -31,10 +31,10 @@ final class OrderRepository extends AbstractRepository implements OrderRepositor
 
     public function findRecentOrdersForUser(User $user, int $limit = 10): array
     {
-        return $this->createQueryBuilder('o')
-            ->andWhere('o.customer = :customer')
+        return $this->createQueryBuilder('orderRecord')
+            ->andWhere('orderRecord.customer = :customer')
             ->setParameter('customer', $user)
-            ->orderBy('o.id', 'DESC')
+            ->orderBy('orderRecord.id', 'DESC')
             ->setMaxResults(max(1, $limit))
             ->getQuery()
             ->getResult();
@@ -44,10 +44,10 @@ final class OrderRepository extends AbstractRepository implements OrderRepositor
     {
         $value = $email instanceof Email ? $email->getValue() : (string) $email;
 
-        return $this->createQueryBuilder('o')
-            ->andWhere('o.guestEmail = :guestEmail')
+        return $this->createQueryBuilder('orderRecord')
+            ->andWhere('orderRecord.guestEmail = :guestEmail')
             ->setParameter('guestEmail', $value)
-            ->orderBy('o.id', 'DESC')
+            ->orderBy('orderRecord.id', 'DESC')
             ->setMaxResults(max(1, $limit))
             ->getQuery()
             ->getResult();
@@ -62,10 +62,10 @@ final class OrderRepository extends AbstractRepository implements OrderRepositor
             Order::STATUS_SHIPPED,
         ];
 
-        return $this->createQueryBuilder('o')
-            ->andWhere('o.status IN (:statuses)')
+        return $this->createQueryBuilder('orderRecord')
+            ->andWhere('orderRecord.status IN (:statuses)')
             ->setParameter('statuses', $openStatuses)
-            ->orderBy('o.id', 'ASC')
+            ->orderBy('orderRecord.id', 'ASC')
             ->getQuery()
             ->getResult();
     }
