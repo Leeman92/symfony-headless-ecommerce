@@ -30,38 +30,38 @@ restart: ## Restart all services
 
 restart-traditional: ## Restart only traditional phase services
 	@echo "Restarting traditional phase services..."
-	docker-compose -f docker-compose.traditional.yml up -d --force-recreate
+	docker compose -f docker-compose.traditional.yml up -d --force-recreate
 
 fix-composer: ## Fix Composer issues (git ownership, install dependencies)
 	@echo "Fixing Composer issues..."
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional git config --global --add safe.directory /var/www/html
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional composer install --optimize-autoloader --no-scripts
+	docker compose exec php-fpm-traditional git config --global --add safe.directory /var/www/html
+	docker compose exec php-fpm-traditional composer install --optimize-autoloader --no-scripts
 	@echo "Composer issues fixed!"
 
 clear-cache: ## Clear Symfony cache manually (without console command)
 	@echo "Clearing Symfony cache..."
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional rm -rf var/cache/*
+	docker compose exec php-fpm-traditional rm -rf var/cache/*
 	@echo "Cache cleared!"
 
 warm-cache: ## Clear and warm Symfony cache (requires rate limiter)
 	@echo "Clearing and warming Symfony cache..."
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional rm -rf var/cache/*
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional php bin/console cache:clear --no-warmup
+	docker compose exec php-fpm-traditional rm -rf var/cache/*
+	docker compose exec php-fpm-traditional php bin/console cache:clear --no-warmup
 	@echo "Cache cleared and warmed!"
 
 build: ## Build Docker containers for Phase 1 (Traditional)
 	@echo "Building Docker containers for Phase 1 (Traditional stack)..."
 	@echo "Using USER_ID=$(shell id -u) and GROUP_ID=$(shell id -g)"
 	@echo "Note: composer.lock will be created during build if it doesn't exist"
-	docker-compose -f docker-compose.yml up -d --build
-	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker-compose -f docker-compose.traditional.yml build --no-cache
+	docker compose -f docker compose.yml up -d --build
+	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker compose -f docker-compose.traditional.yml build --no-cache
 
 start: ## Start Phase 1 development environment
 	@echo "Starting shared services (Traefik, PostgreSQL, Redis)..."
-	docker-compose -f docker-compose.yml up -d
+	docker compose -f docker compose.yml up -d
 	@echo "Starting Phase 1 (Traditional) development environment..."
 	@echo "Using USER_ID=$(shell id -u) and GROUP_ID=$(shell id -g)"
-	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker-compose -f docker-compose.traditional.yml up -d
+	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker compose -f docker-compose.traditional.yml up -d
 	@echo "Environment started!"
 	@echo "Traditional Phase: https://traditional.ecommerce.localhost"
 	@echo "Traefik Dashboard: https://traefik.ecommerce.localhost"
@@ -70,12 +70,12 @@ start: ## Start Phase 1 development environment
 
 stop: ## Stop all Docker containers
 	@echo "Stopping all containers..."
-	docker-compose -f docker-compose.traditional.yml down
-	docker-compose -f docker-compose.yml down
+	docker compose -f docker-compose.traditional.yml down
+	docker compose -f docker compose.yml down
 
 test: ## Run PHPUnit tests
 	@echo "Running tests..."
-	docker-compose -f docker-compose.traditional.yml exec php-fpm vendor/bin/phpunit
+	docker compose exec php-fpm-traditional vendor/bin/phpunit
 
 load-test: ## Run load test against Phase 1
 	@echo "Running load test against Phase 1..."
@@ -84,19 +84,19 @@ load-test: ## Run load test against Phase 1
 
 clean: ## Clean up Docker containers and volumes
 	@echo "Cleaning up..."
-	docker-compose -f docker-compose.traditional.yml down -v
-	docker-compose -f docker-compose.yml down -v
+	docker compose -f docker-compose.traditional.yml down -v
+	docker compose -f docker compose.yml down -v
 	docker network rm ecommerce-network || true
 	docker system prune -f
 
 install: ## Install Composer dependencies (run inside container)
 	@echo "Installing Composer dependencies..."
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional composer install --optimize-autoloader
+	docker compose exec php-fpm-traditional composer install --optimize-autoloader
 	@echo "Dependencies installed successfully!"
 
 composer-update: ## Update Composer dependencies and create lock file
 	@echo "Updating Composer dependencies..."
-	docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional composer update --lock
+	docker compose exec php-fpm-traditional composer update --lock
 	@echo "Dependencies updated and lock file created!"
 
 install-package: ## Install a Composer package (usage: make install-package package=symfony/rate-limiter)
@@ -105,7 +105,7 @@ install-package: ## Install a Composer package (usage: make install-package pack
 		exit 1; \
 	fi
 	@echo "Installing package: $(package)..."
-	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional composer require $(package) --no-scripts
+	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker compose exec php-fpm-traditional composer require $(package) --no-scripts
 	@echo "Package $(package) installed successfully!"
 
 fix-permissions: ## Fix file permissions for development
@@ -129,17 +129,17 @@ rebuild: ## Rebuild containers with correct permissions and test
 # Code Quality Commands
 cs-fix: ## Fix code style with PHP-CS-Fixer
 	@echo "Fixing code style with PHP-CS-Fixer..."
-	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php -v
+	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker compose exec php-fpm-traditional vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php -v
 	@echo "Code style fixed!"
 
 cs-check: ## Check code style with PHP-CS-Fixer (dry-run)
 	@echo "Checking code style with PHP-CS-Fixer..."
-	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run -v
+	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker compose exec php-fpm-traditional vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run -v
 	@echo "Code style check complete!"
 
 phpstan: ## Run PHPStan static analysis
 	@echo "Running PHPStan static analysis..."
-	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker-compose -f docker-compose.traditional.yml exec php-fpm-traditional vendor/bin/phpstan analyse --configuration=phpstan.neon
+	USER_ID=$(shell id -u) GROUP_ID=$(shell id -g) docker compose exec php-fpm-traditional vendor/bin/phpstan analyse --configuration=phpstan.neon
 	@echo "Static analysis complete!"
 
 quality: ## Run all code quality checks
@@ -154,12 +154,12 @@ quality-fix: ## Fix all code quality issues
 	@echo "All quality issues fixed!"
 
 migrate: ## Run database migrations
-	docker-compose -f docker-compose.traditional.yml exec php-fpm bin/console doctrine:migrations:migrate --no-interaction
+	docker compose exec php-fpm-traditional bin/console doctrine:migrations:migrate --no-interaction
 
 db-create: ## Create database
-	docker-compose -f docker-compose.traditional.yml exec php-fpm bin/console doctrine:database:create --if-not-exists
+	docker compose exec php-fpm-traditional bin/console doctrine:database:create --if-not-exists
 
 db-reset: ## Reset database (drop, create, migrate)
-	docker-compose -f docker-compose.traditional.yml exec php-fpm bin/console doctrine:database:drop --force --if-exists
-	docker-compose -f docker-compose.traditional.yml exec php-fpm bin/console doctrine:database:create
-	docker-compose -f docker-compose.traditional.yml exec php-fpm bin/console doctrine:migrations:migrate --no-interaction
+	docker compose exec php-fpm-traditional bin/console doctrine:database:drop --force --if-exists
+	docker compose exec php-fpm-traditional bin/console doctrine:database:create
+	docker compose exec php-fpm-traditional bin/console doctrine:migrations:migrate --no-interaction
