@@ -33,3 +33,17 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.request, priority: 1000 }
             - { name: kernel.event_listener, event: kernel.response, priority: -1000 }
+
+    App\Domain\Repository\ProductRepositoryInterface: '@App\Infrastructure\Repository\ProductRepository'
+
+    App\Domain\Repository\OrderRepositoryInterface: '@App\Infrastructure\Repository\OrderRepository'
+
+    App\Domain\Repository\PaymentRepositoryInterface: '@App\Infrastructure\Repository\PaymentRepository'
+
+    App\Application\Service\Product\ProductServiceInterface: '@App\Application\Service\Product\ProductService'
+
+    App\Application\Service\Order\OrderServiceInterface: '@App\Application\Service\Order\OrderService'
+
+    App\Infrastructure\Stripe\StripePaymentGatewayInterface: '@App\Infrastructure\Stripe\StripePaymentGateway'
+
+    App\Application\Service\Payment\PaymentServiceInterface: '@App\Application\Service\Payment\PaymentService'

@@ -9,8 +9,12 @@ namespace App\Domain\Exception;
  */
 final class ProductNotFoundException extends EcommerceException
 {
-    public function __construct(int $productId)
+    public function __construct(int|string $productIdentifier)
     {
-        parent::__construct("Product with ID {$productId} not found", 404);
+        $message = is_int($productIdentifier)
+            ? "Product with ID {$productIdentifier} not found"
+            : "Product with identifier {$productIdentifier} not found";
+
+        parent::__construct($message, 404);
     }
 }
