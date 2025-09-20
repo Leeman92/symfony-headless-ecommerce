@@ -79,9 +79,9 @@ final class PerformanceMiddleware
         $this->logger->info('Performance metrics', $metrics);
 
         // Add performance headers for debugging
-        $response->headers->set('X-Execution-Time', $executionTime);
-        $response->headers->set('X-Memory-Usage', $memoryUsage);
-        $response->headers->set('X-Query-Count', $this->queryCounter->getCount());
+        $response->headers->set('X-Execution-Time', (string) $metrics['execution_time']);
+        $response->headers->set('X-Memory-Usage', (string) $memoryUsage);
+        $response->headers->set('X-Query-Count', (string) $this->queryCounter->getCount());
         $response->headers->set('X-Phase', $this->getCurrentPhase());
 
         // Clean up

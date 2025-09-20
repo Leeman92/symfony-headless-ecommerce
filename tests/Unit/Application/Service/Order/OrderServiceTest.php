@@ -24,6 +24,7 @@ use App\Domain\ValueObject\OrderNumber;
 use App\Domain\ValueObject\PersonName;
 use App\Domain\ValueObject\Phone;
 use App\Domain\ValueObject\Slug;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -44,7 +45,7 @@ final class OrderServiceTest extends TestCase
 
         $this->orderRepository = $this->createMock(OrderRepositoryInterface::class);
         $this->productService = $this->createMock(ProductServiceInterface::class);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->entityManager = $this->createMock(EntityManager::class);
 
         $this->service = new OrderService(
             $this->orderRepository,
@@ -64,9 +65,9 @@ final class OrderServiceTest extends TestCase
         ]);
 
         $this->entityManager->expects(self::once())
-            ->method('transactional')
+            ->method('wrapInTransaction')
             ->willReturnCallback(function (callable $callback) {
-                return $callback($this->entityManager);
+                return $callback();
             });
 
         $this->productService->expects(self::once())
@@ -115,9 +116,9 @@ final class OrderServiceTest extends TestCase
         );
 
         $this->entityManager->expects(self::once())
-            ->method('transactional')
+            ->method('wrapInTransaction')
             ->willReturnCallback(function (callable $callback) {
-                return $callback($this->entityManager);
+                return $callback();
             });
 
         $this->productService->expects(self::once())
@@ -148,9 +149,9 @@ final class OrderServiceTest extends TestCase
         $draft = new OrderDraft([new OrderItemDraft(99, 1)], 'USD');
 
         $this->entityManager->expects(self::once())
-            ->method('transactional')
+            ->method('wrapInTransaction')
             ->willReturnCallback(function (callable $callback) {
-                return $callback($this->entityManager);
+                return $callback();
             });
 
         $this->productService->expects(self::once())
@@ -173,9 +174,9 @@ final class OrderServiceTest extends TestCase
         $user = $this->createUser();
 
         $this->entityManager->expects(self::once())
-            ->method('transactional')
+            ->method('wrapInTransaction')
             ->willReturnCallback(function (callable $callback) {
-                return $callback($this->entityManager);
+                return $callback();
             });
 
         $this->orderRepository->expects(self::once())
@@ -199,7 +200,7 @@ final class OrderServiceTest extends TestCase
         $order->setCustomer($user);
 
         $this->entityManager->expects(self::never())
-            ->method('transactional');
+            ->method('wrapInTransaction');
 
         $this->orderRepository->expects(self::never())
             ->method('save');

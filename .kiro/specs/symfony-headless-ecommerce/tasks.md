@@ -198,6 +198,11 @@ Convert the feature design into a series of prompts for a code-generation LLM th
 - [ ] 11.1 Create performance documentation
   - Document intentional performance issues in current implementation
   - Create baseline performance metrics and load test results
+  
+- [ ] Backlog: Benchmark Doctrine lazy ghost proxies vs. final entities (very low priority)
+  - Measure performance impact of re-enabling `enable_lazy_ghost_objects`
+  - Explore compatibility options (entity refactor, selective proxy opt-out)
+  - Recommend long-term approach once data collected
   - Write blog post outline for optimization journey
   - Document next phase optimization strategies
   - _Requirements: 4.4, 5.2_

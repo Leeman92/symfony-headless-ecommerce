@@ -15,7 +15,10 @@ RUN apk add --no-cache \
     postgresql-dev \
     icu-dev \
     oniguruma-dev \
-    shadow
+    shadow \
+    # needed to build PECL extensions (phpize, autoconf, make, etc.)
+    $PHPIZE_DEPS \
+    linux-headers
 
 # Install PHP extensions
 RUN docker-php-ext-configure intl
@@ -29,6 +32,21 @@ RUN docker-php-ext-install \
     gd \
     intl \
     opcache
+
+# --- Xdebug ---
+# Install via PECL and enable
+RUN pecl install xdebug \
+ && docker-php-ext-enable xdebug
+
+# Configure Xdebug (disabled by default; enable via env at runtime)
+RUN { \
+  echo "zend_extension=$(php -i | awk -F'=> ' '/^extension_dir/ {print $2}')/xdebug.so"; \
+  echo "xdebug.mode=\${XDEBUG_MDE:-off}";               # develop,debug,coverage,...
+  echo "xdebug.start_with_request=\${XDEBUG_START_WITH_REQUEST:-trigger}";
+  echo "xdebug.client_port=\${XDEBUG_CLIENT_PORT:-9003}"; # Xdebug v3 default
+  # For coverage only, no client is needed; the next two lines are harmless defaults.
+  echo "xdebug.client_host=\${XDEBUG_CLIENT_HOST:-host.docker.internal}";
+} > /usr/local/etc/php/conf.d/99-xdebug.ini
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

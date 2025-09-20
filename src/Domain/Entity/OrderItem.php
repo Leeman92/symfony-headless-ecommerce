@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Entity;
 
+use App\Domain\Entity\Product;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Infrastructure\Doctrine\Type\MoneyType;
@@ -30,10 +31,9 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     #[Assert\NotNull(message: 'Order item must belong to an order')]
     private ?Order $order = null;
 
-    #[ORM\ManyToOne(targetEntity: Product::class)]
-    #[ORM\JoinColumn(nullable: false)]
-    #[Assert\NotNull(message: 'Order item must reference a product')]
-    private ?Product $product = null;
+    #[ORM\Column(type: Types::INTEGER)]
+    #[Assert\PositiveOrZero(message: 'Order item product reference cannot be negative')]
+    private int $productId;
 
     // Store product information at time of purchase for historical accuracy
     #[ORM\Column(type: Types::STRING, length: 200)]
@@ -60,7 +60,8 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         int $quantity,
         Money|string|null $unitPrice = null
     ) {
-        $this->product = $product;
+        $productId = $product->getId();
+        $this->productId = $productId === null ? 0 : (int) $productId;
         $this->productName = $product->getName();
         $this->productSku = $product->getSku();
 
@@ -87,14 +88,18 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         return $this;
     }
 
-    public function getProduct(): ?Product
+    public function getProductId(): int
     {
-        return $this->product;
+        return $this->productId;
     }
 
-    public function setProduct(?Product $product): static
+    public function setProductId(int $productId): static
     {
-        $this->product = $product;
+        if ($productId < 0) {
+            throw new \InvalidArgumentException('Product reference cannot be negative');
+        }
+
+        $this->productId = $productId;
         return $this;
     }
 

@@ -199,11 +199,13 @@ final class OrderService implements OrderServiceInterface
 
     private function runInTransaction(callable $operation)
     {
-        if (method_exists($this->entityManager, 'wrapInTransaction')) {
-            return $this->entityManager->wrapInTransaction($operation);
+        if (is_callable([$this->entityManager, 'wrapInTransaction'])) {
+            return $this->entityManager->wrapInTransaction(static function () use ($operation) {
+                return $operation();
+            });
         }
 
-        return $this->entityManager->transactional(static function ($em) use ($operation) {
+        return $this->entityManager->transactional(static function () use ($operation) {
             return $operation();
         });
     }

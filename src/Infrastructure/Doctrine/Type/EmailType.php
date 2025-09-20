@@ -30,8 +30,12 @@ final class EmailType extends StringType
             return null;
         }
 
+        if (is_string($value)) {
+            $value = new Email($value);
+        }
+
         if (!$value instanceof Email) {
-            throw new \InvalidArgumentException('Expected Email value object');
+            throw new \InvalidArgumentException('Expected Email value object or string');
         }
 
         return $value->getValue();

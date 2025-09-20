@@ -12,6 +12,7 @@ use App\Domain\Repository\PaymentRepositoryInterface;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\OrderNumber;
 use App\Infrastructure\Stripe\StripePaymentGatewayInterface;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +35,7 @@ final class PaymentServiceTest extends TestCase
 
         $this->paymentRepository = $this->createMock(PaymentRepositoryInterface::class);
         $this->stripeGateway = $this->createMock(StripePaymentGatewayInterface::class);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->entityManager = $this->createMock(EntityManager::class);
 
         $this->service = new PaymentService(
             $this->paymentRepository,
@@ -78,9 +79,9 @@ final class PaymentServiceTest extends TestCase
             });
 
         $this->entityManager->expects(self::once())
-            ->method('transactional')
-            ->willReturnCallback(static function (callable $operation) {
-                return $operation(new \stdClass());
+            ->method('wrapInTransaction')
+            ->willReturnCallback(function (callable $operation) {
+                return $operation();
             });
 
         $payment = $this->service->createPaymentIntent($order);
@@ -127,9 +128,9 @@ final class PaymentServiceTest extends TestCase
             ->with($payment);
 
         $this->entityManager->expects(self::once())
-            ->method('transactional')
-            ->willReturnCallback(static function (callable $operation) {
-                return $operation(new \stdClass());
+            ->method('wrapInTransaction')
+            ->willReturnCallback(function (callable $operation) {
+                return $operation();
             });
 
         $result = $this->service->confirmPayment('pi_456', 'pm_123');
