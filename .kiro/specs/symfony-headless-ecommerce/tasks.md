@@ -38,22 +38,22 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Write unit tests for order creation and payment tracking for both scenarios
   - _Requirements: 1.4, 6.1_
 
-- [ ] 3. Create repository layer with Doctrine
-- [ ] 3.1 Implement base repository pattern
+- [x] 3. Create repository layer with Doctrine
+- [x] 3.1 Implement base repository pattern
   - Create abstract base repository with common query methods
   - Implement repository interfaces for dependency injection
   - Add query builder utilities for complex queries
   - Write unit tests for repository base functionality
   - _Requirements: 7.1, 5.1_
 
-- [ ] 3.2 Implement Product repository with intentional N+1 issues
+- [x] 3.2 Implement Product repository with intentional N+1 issues
   - Create ProductRepository with basic CRUD operations
   - Implement product search with intentional performance issues (N+1 queries)
   - Add category filtering and basic pagination
   - Write integration tests for product queries
   - _Requirements: 1.1, 1.2, 4.1_
 
-- [ ] 3.3 Implement Order and User repositories
+- [x] 3.3 Implement Order and User repositories
   - Create OrderRepository with order management queries
   - Implement UserRepository with authentication queries
   - Add order history and customer relationship queries
