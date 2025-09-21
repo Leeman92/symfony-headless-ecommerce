@@ -130,15 +130,15 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Write functional tests for guest-to-user conversion workflow
   - _Requirements: 1.4, 6.1_
 
-- [ ] 7. Add API documentation and validation
-- [ ] 7.1 Implement OpenAPI documentation
+- [x] 7. Add API documentation and validation
+- [x] 7.1 Implement OpenAPI documentation
   - Configure NelmioApiDocBundle for Swagger documentation
   - Add API endpoint documentation with examples
   - Implement request/response schema definitions
   - Generate and test API documentation accessibility
   - _Requirements: 3.1, 3.4_
 
-- [ ] 7.2 Implement request validation and error handling
+- [x] 7.2 Implement request validation and error handling
   - Create custom validation constraints for business rules
   - Implement global exception handler for API errors
   - Add structured error responses with proper HTTP codes
