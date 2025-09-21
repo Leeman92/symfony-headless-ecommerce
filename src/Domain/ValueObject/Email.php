@@ -44,6 +44,9 @@ final readonly class Email
         $this->value = $email;
     }
 
+    /**
+     * @return non-empty-string
+     */
     public function getValue(): string
     {
         return $this->value;

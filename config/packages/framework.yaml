@@ -20,7 +20,7 @@ framework:
 
     # API Configuration
     serializer:
-        enable_annotations: true
+        enable_attributes: true
         
     property_access: ~
     property_info: ~
