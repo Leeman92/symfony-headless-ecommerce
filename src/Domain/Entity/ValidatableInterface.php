@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Entity;
 
+use Stringable;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 /**
  * Interface for entities that support validation
- * 
+ *
  * Provides methods for validating entity state and
  * retrieving validation errors.
  */
@@ -26,8 +27,8 @@ interface ValidatableInterface
 
     /**
      * Get validation errors as an array
-     * 
-     * @return array<string, string[]>
+     *
+     * @return array<string, list<string|Stringable>>
      */
     public function getValidationErrors(): array;
 }

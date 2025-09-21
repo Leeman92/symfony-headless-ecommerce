@@ -7,6 +7,7 @@ namespace App\Infrastructure\Doctrine\Type;
 use App\Domain\ValueObject\Phone;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\StringType;
+use InvalidArgumentException;
 
 /**
  * Custom Doctrine type for Phone value object
@@ -31,7 +32,7 @@ final class PhoneType extends StringType
         }
 
         if (!$value instanceof Phone) {
-            throw new \InvalidArgumentException('Expected Phone value object');
+            throw new InvalidArgumentException('Expected Phone value object');
         }
 
         return $value->getValue();

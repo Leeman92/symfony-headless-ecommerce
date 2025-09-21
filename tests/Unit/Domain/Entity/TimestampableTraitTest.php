@@ -53,11 +53,11 @@ final class TimestampableTraitTest extends TestCase
 
         self::assertNotNull($this->entity->getCreatedAt());
         self::assertNotNull($this->entity->getUpdatedAt());
-        
+
         // Check that timestamps are within reasonable range
         self::assertGreaterThanOrEqual($beforeCall, $this->entity->getCreatedAt());
         self::assertLessThanOrEqual($afterCall, $this->entity->getCreatedAt());
-        
+
         self::assertGreaterThanOrEqual($beforeCall, $this->entity->getUpdatedAt());
         self::assertLessThanOrEqual($afterCall, $this->entity->getUpdatedAt());
     }
@@ -73,7 +73,7 @@ final class TimestampableTraitTest extends TestCase
 
         // Created at should remain unchanged
         self::assertSame($originalCreated, $this->entity->getCreatedAt());
-        
+
         // Updated at should be set to current time
         self::assertNotNull($this->entity->getUpdatedAt());
         self::assertGreaterThanOrEqual($beforeCall, $this->entity->getUpdatedAt());

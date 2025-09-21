@@ -10,9 +10,9 @@ use PHPUnit\Framework\TestCase;
 
 abstract class DoctrineRepositoryTestCase extends TestCase
 {
-    protected EntityManagerInterface $entityManager;
+    protected ?EntityManagerInterface $entityManager;
 
-    protected InMemoryManagerRegistry $managerRegistry;
+    protected ?InMemoryManagerRegistry $managerRegistry;
 
     protected function setUp(): void
     {
@@ -45,7 +45,8 @@ abstract class DoctrineRepositoryTestCase extends TestCase
             $this->entityManager->close();
         }
 
-        unset($this->entityManager, $this->managerRegistry);
+        $this->entityManager = null;
+        $this->managerRegistry = null;
 
         parent::tearDown();
     }

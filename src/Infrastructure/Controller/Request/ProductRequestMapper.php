@@ -5,12 +5,31 @@ declare(strict_types=1);
 namespace App\Infrastructure\Controller\Request;
 
 use App\Domain\Entity\Category;
+use App\Domain\Entity\MediaAsset;
 use App\Domain\Entity\Product;
+use App\Domain\Entity\ProductMedia;
+use App\Domain\Entity\ProductVariant;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+
+use function array_key_exists;
+use function filter_var;
+use function in_array;
+use function is_array;
+use function is_bool;
+use function is_numeric;
+use function is_scalar;
+use function is_string;
+use function sprintf;
+use function str_replace;
+use function strtoupper;
+use function trim;
+
+use const FILTER_NULL_ON_FAILURE;
+use const FILTER_VALIDATE_BOOL;
 
 final class ProductRequestMapper
 {
@@ -31,6 +50,9 @@ final class ProductRequestMapper
 
         $price = $this->parseMoney($payload['price'] ?? null, $payload['currency'] ?? null);
         $category = $this->resolveCategory($payload, true);
+        if (!$category instanceof Category) {
+            throw new InvalidArgumentException('Category is required');
+        }
 
         $product = new Product($name, $slug, $price, $category);
 
@@ -116,15 +138,15 @@ final class ProductRequestMapper
         }
 
         if (array_key_exists('variants', $payload)) {
-            $product->setVariants($this->extractNullableArray($payload, 'variants'));
+            $this->applyVariantsPayload($product, $payload['variants']);
         }
 
         if (array_key_exists('images', $payload)) {
-            $product->setImages($this->extractNullableArray($payload, 'images'));
+            $this->applyImagesPayload($product, $payload['images']);
         }
 
         if (array_key_exists('seo', $payload)) {
-            $product->setSeoData($this->extractNullableArray($payload, 'seo'));
+            $this->applySeoPayload($product, $payload['seo']);
         }
 
         $category = $this->resolveCategory($payload, false);
@@ -152,6 +174,7 @@ final class ProductRequestMapper
             if (!$category instanceof Category) {
                 throw new InvalidArgumentException(sprintf('Category with ID %d not found', $id));
             }
+
             return $category;
         }
 
@@ -161,6 +184,7 @@ final class ProductRequestMapper
             if (!$category instanceof Category) {
                 throw new InvalidArgumentException(sprintf('Category with slug %s not found', $slug->getValue()));
             }
+
             return $category;
         }
 
@@ -186,14 +210,15 @@ final class ProductRequestMapper
             $amount = (string) $value['amount'];
             $currency = isset($value['currency']) && $value['currency'] !== ''
                 ? strtoupper((string) $value['currency'])
-                : ($currency ?? 'USD');
+                : ($currency ?? Money::DEFAULT_CURRENCY);
 
             return new Money($amount, $currency);
         }
 
         if (is_string($value) || is_numeric($value)) {
             $amount = (string) $value;
-            return new Money($amount, $currency ?? 'USD');
+
+            return new Money($amount, $currency ?? Money::DEFAULT_CURRENCY);
         }
 
         throw new InvalidArgumentException('Price must be a string or array with amount');
@@ -279,5 +304,334 @@ final class ProductRequestMapper
         }
 
         return $payload[$key];
+    }
+
+    private function applyVariantsPayload(Product $product, mixed $payload): void
+    {
+        if ($payload === null) {
+            $product->clearVariants();
+
+            return;
+        }
+
+        if (!is_array($payload)) {
+            throw new InvalidArgumentException('Variants must be provided as an array');
+        }
+
+        $existingBySku = [];
+        foreach ($product->getVariants() as $existingVariant) {
+            $existingBySku[$existingVariant->getSku()->getValue()] = $existingVariant;
+        }
+
+        $position = 0;
+        $hasDefault = false;
+
+        foreach ($payload as $rawVariant) {
+            if (!is_array($rawVariant)) {
+                throw new InvalidArgumentException('Each variant entry must be an array');
+            }
+
+            $sku = $rawVariant['sku'] ?? null;
+            $skuString = $this->toNullableString($sku);
+            if ($skuString === null) {
+                throw new InvalidArgumentException('Variant sku is required');
+            }
+
+            $variant = $existingBySku[$skuString] ?? new ProductVariant($product, new ProductSku($skuString));
+            unset($existingBySku[$skuString]);
+
+            if (!$product->getVariants()->contains($variant)) {
+                $product->addVariant($variant);
+            }
+
+            $variant->setSku(new ProductSku($skuString));
+            $variant->setName($this->toNullableString($rawVariant['name'] ?? null));
+
+            if (array_key_exists('price', $rawVariant)) {
+                $pricePayload = $rawVariant['price'];
+                $variant->setPrice($pricePayload === null ? null : $this->parseMoney($pricePayload, $product->getPrice()->getCurrency()));
+            }
+
+            if (array_key_exists('compare_price', $rawVariant)) {
+                $comparePayload = $rawVariant['compare_price'];
+                $variant->setComparePrice($comparePayload === null ? null : $this->parseMoney($comparePayload, $product->getPrice()->getCurrency()));
+            }
+
+            if (array_key_exists('stock', $rawVariant)) {
+                $variant->setStock($this->extractVariantStock($rawVariant['stock']));
+            }
+
+            $isDefault = $this->extractVariantDefault($rawVariant['is_default'] ?? null);
+            $variant->markAsDefault($isDefault);
+            if ($isDefault) {
+                $hasDefault = true;
+            }
+
+            if (array_key_exists('position', $rawVariant)) {
+                $variant->setPosition((int) $rawVariant['position']);
+            } else {
+                $variant->setPosition($position);
+            }
+
+            $attributes = $this->extractVariantAttributes($rawVariant);
+            $variant->replaceAttributes($attributes);
+
+            ++$position;
+        }
+
+        if (!$hasDefault) {
+            $firstVariant = $product->getVariants()->first();
+            if ($firstVariant instanceof ProductVariant) {
+                $firstVariant->markAsDefault(true);
+            }
+        }
+
+        foreach ($existingBySku as $variantToRemove) {
+            $product->removeVariant($variantToRemove);
+        }
+    }
+
+    private function applyImagesPayload(Product $product, mixed $payload): void
+    {
+        if ($payload === null) {
+            $product->clearMedia();
+
+            return;
+        }
+
+        if (!is_array($payload)) {
+            throw new InvalidArgumentException('Images must be provided as an array');
+        }
+
+        $existingById = [];
+        foreach ($product->getMedia() as $media) {
+            $id = $media->getId();
+            if ($id !== null) {
+                $existingById[$id] = $media;
+            }
+        }
+
+        $position = 0;
+        $hasPrimary = false;
+
+        foreach ($payload as $rawImage) {
+            if (!is_array($rawImage)) {
+                throw new InvalidArgumentException('Each image entry must be an array');
+            }
+
+            $media = null;
+            if (array_key_exists('id', $rawImage) && $rawImage['id'] !== null) {
+                $mediaId = (int) $rawImage['id'];
+                $media = $existingById[$mediaId] ?? null;
+                unset($existingById[$mediaId]);
+            }
+
+            $asset = $this->resolveMediaAsset($rawImage);
+
+            if ($media === null) {
+                $media = new ProductMedia($product, $asset);
+                $product->addMedia($media);
+            } else {
+                $media->setMediaAsset($asset);
+            }
+
+            $media->setPosition(array_key_exists('position', $rawImage) ? (int) $rawImage['position'] : $position);
+
+            $isPrimary = $this->extractImagePrimary($rawImage['is_primary'] ?? null);
+            $media->markAsPrimary($isPrimary);
+            if ($isPrimary) {
+                foreach ($product->getMedia() as $candidate) {
+                    if ($candidate !== $media) {
+                        $candidate->markAsPrimary(false);
+                    }
+                }
+            }
+            if ($isPrimary) {
+                $hasPrimary = true;
+            }
+
+            if (array_key_exists('alt_override', $rawImage)) {
+                $media->setAltTextOverride($this->toNullableString($rawImage['alt_override']));
+            } elseif (array_key_exists('alt', $rawImage)) {
+                $asset->setAltText($this->toNullableString($rawImage['alt']));
+                $media->setAltTextOverride(null);
+            }
+
+            ++$position;
+        }
+
+        if (!$hasPrimary) {
+            $firstMedia = $product->getMedia()->first();
+            if ($firstMedia instanceof ProductMedia) {
+                $firstMedia->markAsPrimary(true);
+            }
+        }
+
+        foreach ($existingById as $mediaToRemove) {
+            $product->removeMedia($mediaToRemove);
+        }
+    }
+
+    private function applySeoPayload(Product $product, mixed $payload): void
+    {
+        if ($payload === null) {
+            $product->setSeoData(null);
+
+            return;
+        }
+
+        if (!is_array($payload)) {
+            throw new InvalidArgumentException('SEO data must be provided as an array');
+        }
+
+        $seo = [];
+        $title = $this->toNullableString($payload['title'] ?? null);
+        $description = $this->toNullableString($payload['description'] ?? null);
+        $keywords = $this->toNullableString($payload['keywords'] ?? null);
+
+        if ($title !== null) {
+            $seo['title'] = $title;
+        }
+        if ($description !== null) {
+            $seo['description'] = $description;
+        }
+        if ($keywords !== null) {
+            $seo['keywords'] = $keywords;
+        }
+
+        $product->setSeoData($seo === [] ? null : $seo);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function resolveMediaAsset(array $payload): MediaAsset
+    {
+        $repository = $this->entityManager->getRepository(MediaAsset::class);
+
+        if (array_key_exists('asset_id', $payload) && $payload['asset_id'] !== null) {
+            $assetId = (int) $payload['asset_id'];
+            $asset = $repository->find($assetId);
+            if (!$asset instanceof MediaAsset) {
+                throw new InvalidArgumentException(sprintf('Media asset with ID %d not found', $assetId));
+            }
+
+            if (array_key_exists('alt', $payload)) {
+                $asset->setAltText($this->toNullableString($payload['alt']));
+            }
+
+            return $asset;
+        }
+
+        $url = $this->toNullableString($payload['url'] ?? null);
+        if ($url === null) {
+            throw new InvalidArgumentException('Image url is required when no asset_id is provided');
+        }
+
+        $asset = $repository->findOneBy(['url' => $url]);
+        if ($asset instanceof MediaAsset) {
+            if (array_key_exists('alt', $payload)) {
+                $asset->setAltText($this->toNullableString($payload['alt']));
+            }
+
+            return $asset;
+        }
+
+        $asset = new MediaAsset($url, $this->toNullableString($payload['alt'] ?? null));
+        $this->entityManager->persist($asset);
+
+        return $asset;
+    }
+
+    private function extractVariantStock(mixed $stock): ?int
+    {
+        if ($stock === null || $stock === '') {
+            return null;
+        }
+
+        if (!is_numeric($stock)) {
+            throw new InvalidArgumentException('Variant stock must be numeric');
+        }
+
+        $intValue = (int) $stock;
+        if ($intValue < 0) {
+            throw new InvalidArgumentException('Variant stock must be zero or positive');
+        }
+
+        return $intValue;
+    }
+
+    private function extractVariantDefault(mixed $flag): bool
+    {
+        if ($flag === null) {
+            return false;
+        }
+
+        if (is_bool($flag)) {
+            return $flag;
+        }
+
+        return filter_var($flag, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, string|null>
+     */
+    private function extractVariantAttributes(array $payload): array
+    {
+        $attributes = [];
+
+        if (array_key_exists('attributes', $payload) && $payload['attributes'] !== null) {
+            if (!is_array($payload['attributes'])) {
+                throw new InvalidArgumentException('Variant attributes must be provided as an array');
+            }
+
+            foreach ($payload['attributes'] as $name => $value) {
+                if (!is_string($name) || $name === '') {
+                    continue;
+                }
+
+                $attributes[$name] = $this->toNullableString($value);
+            }
+        }
+
+        $reservedKeys = ['id', 'sku', 'name', 'price', 'compare_price', 'stock', 'is_default', 'position', 'attributes'];
+
+        foreach ($payload as $key => $value) {
+            if (in_array($key, $reservedKeys, true)) {
+                continue;
+            }
+
+            if (is_scalar($value) || $value === null) {
+                $attributes[$key] = $this->toNullableString($value);
+            }
+        }
+
+        return $attributes;
+    }
+
+    private function extractImagePrimary(mixed $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false;
+    }
+
+    private function toNullableString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $string = trim((string) $value);
+
+        return $string === '' ? null : $string;
     }
 }

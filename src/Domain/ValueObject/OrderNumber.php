@@ -6,9 +6,21 @@ namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
 
+use function date;
+use function preg_match;
+use function random_int;
+use function str_pad;
+use function strlen;
+use function strtoupper;
+use function substr;
+use function time;
+use function trim;
+
+use const STR_PAD_LEFT;
+
 /**
  * Order number value object
- * 
+ *
  * Encapsulates order number generation and validation according to DDD principles.
  * Ensures order numbers are always in a valid format.
  */
@@ -19,8 +31,8 @@ final readonly class OrderNumber
     public function __construct(string $orderNumber)
     {
         $orderNumber = trim(strtoupper($orderNumber));
-        
-        if (empty($orderNumber)) {
+
+        if ($orderNumber === '') {
             throw new InvalidArgumentException('Order number cannot be empty');
         }
 
@@ -28,7 +40,7 @@ final readonly class OrderNumber
             throw new InvalidArgumentException('Order number cannot be longer than 20 characters');
         }
 
-        if (!preg_match('/^[A-Z0-9\-]+$/', $orderNumber)) {
+        if (preg_match('/^[A-Z0-9\-]+$/', $orderNumber) !== 1) {
             throw new InvalidArgumentException('Order number can only contain uppercase letters, numbers, and hyphens');
         }
 
@@ -42,7 +54,7 @@ final readonly class OrderNumber
         $day = date('d');
         $timestamp = time();
         $random = str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT);
-        
+
         return new self("ORD-{$year}{$month}{$day}-{$random}");
     }
 
@@ -50,16 +62,16 @@ final readonly class OrderNumber
     {
         $timestamp = time();
         $random = str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-        
+
         $orderNumber = "{$prefix}-{$timestamp}-{$random}";
-        
+
         // Ensure the generated order number doesn't exceed 20 characters
         if (strlen($orderNumber) > 20) {
             // Use shorter timestamp (last 8 digits) and smaller random
             $shortTimestamp = substr((string) $timestamp, -8);
             $shortRandom = str_pad((string) random_int(1, 99), 2, '0', STR_PAD_LEFT);
             $orderNumber = "{$prefix}-{$shortTimestamp}-{$shortRandom}";
-            
+
             // If still too long, truncate prefix
             if (strlen($orderNumber) > 20) {
                 $maxPrefixLength = 20 - strlen("-{$shortTimestamp}-{$shortRandom}");
@@ -67,7 +79,7 @@ final readonly class OrderNumber
                 $orderNumber = "{$truncatedPrefix}-{$shortTimestamp}-{$shortRandom}";
             }
         }
-        
+
         return new self($orderNumber);
     }
 
@@ -78,21 +90,23 @@ final readonly class OrderNumber
 
     public function getYear(): ?string
     {
-        if (preg_match('/^ORD-(\d{4})\d{4}-\d{3}$/', $this->value, $matches)) {
+        if (preg_match('/^ORD-(\d{4})\d{4}-\d{3}$/', $this->value, $matches) === 1) {
             return $matches[1];
         }
+
         return null;
     }
 
     public function getDate(): ?string
     {
-        if (preg_match('/^ORD-(\d{4})(\d{2})(\d{2})-\d{3}$/', $this->value, $matches)) {
+        if (preg_match('/^ORD-(\d{4})(\d{2})(\d{2})-\d{3}$/', $this->value, $matches) === 1) {
             return "{$matches[1]}-{$matches[2]}-{$matches[3]}";
         }
+
         return null;
     }
 
-    public function equals(OrderNumber $other): bool
+    public function equals(self $other): bool
     {
         return $this->value === $other->value;
     }

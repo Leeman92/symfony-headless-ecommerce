@@ -12,6 +12,7 @@ use App\Domain\Repository\OrderRepositoryInterface;
 use App\Domain\ValueObject\Email;
 use App\Infrastructure\Controller\Request\OrderRequestMapper;
 use App\Infrastructure\Controller\Transformer\OrderTransformer;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,11 +21,17 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 use function array_key_exists;
+use function count;
 use function in_array;
 use function is_array;
 use function is_string;
+use function sprintf;
 use function strcasecmp;
+
+use const DATE_ATOM;
+use const JSON_THROW_ON_ERROR;
 
 #[Route('/orders', name: 'api_orders_')]
 final class OrderController extends AbstractController
@@ -79,7 +86,7 @@ final class OrderController extends AbstractController
         $limit = $this->extractLimit($request);
 
         $orders = $this->orderRepository->findRecentOrdersForUser($user, $limit);
-        $data = array_map(static fn(Order $order) => OrderTransformer::toArray($order, includeItems: false), $orders);
+        $data = array_map(static fn (Order $order) => OrderTransformer::toArray($order, includeItems: false), $orders);
 
         return $this->json([
             'data' => $data,
@@ -145,6 +152,9 @@ final class OrderController extends AbstractController
         }
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     */
     private function applyStatusUpdate(Order $order, array $payload): void
     {
         if (!array_key_exists('status', $payload) || !is_string($payload['status'])) {
@@ -162,12 +172,37 @@ final class OrderController extends AbstractController
             $order->setNotes(trim($payload['notes']));
         }
 
-        $this->applyOptionalTimestamp($order, 'confirmed_at', $payload, 'setConfirmedAt');
-        $this->applyOptionalTimestamp($order, 'shipped_at', $payload, 'setShippedAt');
-        $this->applyOptionalTimestamp($order, 'delivered_at', $payload, 'setDeliveredAt');
+        $this->applyOptionalTimestamp(
+            $order,
+            'confirmed_at',
+            $payload,
+            static function (Order $target, ?DateTimeImmutable $datetime): void {
+                $target->setConfirmedAt($datetime);
+            },
+        );
+        $this->applyOptionalTimestamp(
+            $order,
+            'shipped_at',
+            $payload,
+            static function (Order $target, ?DateTimeImmutable $datetime): void {
+                $target->setShippedAt($datetime);
+            },
+        );
+        $this->applyOptionalTimestamp(
+            $order,
+            'delivered_at',
+            $payload,
+            static function (Order $target, ?DateTimeImmutable $datetime): void {
+                $target->setDeliveredAt($datetime);
+            },
+        );
     }
 
-    private function applyOptionalTimestamp(Order $order, string $key, array $payload, string $setter): void
+    /**
+     * @param array<string, mixed> $payload
+     * @param callable(Order, ?DateTimeImmutable): void $setter
+     */
+    private function applyOptionalTimestamp(Order $order, string $key, array $payload, callable $setter): void
     {
         if (!array_key_exists($key, $payload)) {
             return;
@@ -175,7 +210,8 @@ final class OrderController extends AbstractController
 
         $value = $payload[$key];
         if ($value === null || $value === '') {
-            $order->{$setter}(null);
+            $setter($order, null);
+
             return;
         }
 
@@ -183,12 +219,12 @@ final class OrderController extends AbstractController
             throw new InvalidArgumentException(sprintf('%s must be an ISO 8601 string or null', $key));
         }
 
-        $dateTime = \DateTimeImmutable::createFromFormat(DATE_ATOM, $value);
+        $dateTime = DateTimeImmutable::createFromFormat(DATE_ATOM, $value);
         if ($dateTime === false) {
             throw new InvalidArgumentException(sprintf('%s must be a valid ISO 8601 string', $key));
         }
 
-        $order->{$setter}($dateTime);
+        $setter($order, $dateTime);
     }
 
     private function findOrderOr404(string $orderNumber): Order
@@ -242,7 +278,7 @@ final class OrderController extends AbstractController
 
     private function extractLimit(Request $request): int
     {
-        $limit = (int) $request->query->get('limit', 10);
+        $limit = $request->query->getInt('limit', 10);
         $limit = max(1, min(50, $limit));
 
         return $limit;

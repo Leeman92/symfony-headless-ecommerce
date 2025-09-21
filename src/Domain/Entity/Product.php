@@ -6,21 +6,27 @@ namespace App\Domain\Entity;
 
 use App\Domain\Type\JsonbType;
 use App\Domain\ValueObject\Money;
+use App\Domain\ValueObject\ProductSeo;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
 use App\Infrastructure\Doctrine\Type\MoneyType;
 use App\Infrastructure\Doctrine\Type\ProductSkuType;
 use App\Infrastructure\Doctrine\Type\SlugType;
 use App\Infrastructure\Repository\ProductRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
+use function array_key_exists;
+
 /**
- * Product entity with PostgreSQL JSONB support
- * 
- * Represents e-commerce products with flexible attributes and variants
- * stored in PostgreSQL JSONB columns for optimal performance.
+ * Product aggregate root for catalog items.
+ *
+ * Attributes remain flexible through JSONB, while variants, media, and SEO
+ * metadata are modeled via dedicated aggregates/value objects for stronger
+ * invariants and reuse.
  */
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\Table(name: 'products')]
@@ -35,7 +41,7 @@ final class Product extends BaseEntity implements ValidatableInterface
         min: 2,
         max: 200,
         minMessage: 'Product name must be at least {{ limit }} characters',
-        maxMessage: 'Product name cannot be longer than {{ limit }} characters'
+        maxMessage: 'Product name cannot be longer than {{ limit }} characters',
     )]
     private string $name;
 
@@ -74,17 +80,22 @@ final class Product extends BaseEntity implements ValidatableInterface
     #[Assert\Positive(message: 'Low stock threshold must be positive')]
     private ?int $lowStockThreshold = null;
 
+    /** @var array<string, mixed>|null */
     #[ORM\Column(type: JsonbType::NAME, nullable: true)]
     private ?array $attributes = null;
 
-    #[ORM\Column(type: JsonbType::NAME, nullable: true)]
-    private ?array $variants = null;
+    /** @var Collection<int, ProductVariant> */
+    #[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductVariant::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC', 'id' => 'ASC'])]
+    private Collection $variants;
 
-    #[ORM\Column(type: JsonbType::NAME, nullable: true)]
-    private ?array $images = null;
+    /** @var Collection<int, ProductMedia> */
+    #[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductMedia::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC', 'id' => 'ASC'])]
+    private Collection $media;
 
-    #[ORM\Column(type: JsonbType::NAME, nullable: true)]
-    private ?array $seoData = null;
+    #[ORM\Embedded(class: ProductSeo::class, columnPrefix: 'seo_')]
+    private ProductSeo $seo;
 
     #[ORM\ManyToOne(targetEntity: Category::class, inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
@@ -95,12 +106,15 @@ final class Product extends BaseEntity implements ValidatableInterface
         string $name,
         Slug|string $slug,
         Money|string $price,
-        Category $category
+        Category $category,
     ) {
         $this->name = $name;
         $this->slug = $slug instanceof Slug ? $slug : new Slug($slug);
         $this->price = $price instanceof Money ? $price : new Money($price);
         $this->category = $category;
+        $this->variants = new ArrayCollection();
+        $this->media = new ArrayCollection();
+        $this->seo = ProductSeo::empty();
     }
 
     public function getName(): string
@@ -111,6 +125,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setName(string $name): static
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -122,6 +137,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setSlug(Slug|string $slug): static
     {
         $this->slug = $slug instanceof Slug ? $slug : new Slug($slug);
+
         return $this;
     }
 
@@ -133,6 +149,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setDescription(?string $description): static
     {
         $this->description = $description;
+
         return $this;
     }
 
@@ -144,6 +161,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setShortDescription(?string $shortDescription): static
     {
         $this->shortDescription = $shortDescription;
+
         return $this;
     }
 
@@ -155,6 +173,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setPrice(Money|string $price): static
     {
         $this->price = $price instanceof Money ? $price : new Money($price);
+
         return $this;
     }
 
@@ -177,6 +196,7 @@ final class Product extends BaseEntity implements ValidatableInterface
         } else {
             $this->comparePrice = new Money($comparePrice, $this->price->getCurrency());
         }
+
         return $this;
     }
 
@@ -187,19 +207,21 @@ final class Product extends BaseEntity implements ValidatableInterface
 
     public function hasDiscount(): bool
     {
-        return $this->comparePrice !== null && 
-               $this->comparePrice->isGreaterThan($this->price);
+        return $this->comparePrice !== null
+               && $this->comparePrice->isGreaterThan($this->price);
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (!$this->hasDiscount()) {
+        $comparePrice = $this->comparePrice;
+
+        if ($comparePrice === null || !$comparePrice->isGreaterThan($this->price)) {
             return null;
         }
 
-        $original = $this->comparePrice->getAmountAsFloat();
+        $original = $comparePrice->getAmountAsFloat();
         $current = $this->price->getAmountAsFloat();
-        
+
         return round((($original - $current) / $original) * 100, 2);
     }
 
@@ -216,18 +238,21 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setStock(int $stock): static
     {
         $this->stock = $stock;
+
         return $this;
     }
 
     public function increaseStock(int $quantity): static
     {
         $this->stock += $quantity;
+
         return $this;
     }
 
     public function decreaseStock(int $quantity): static
     {
         $this->stock = max(0, $this->stock - $quantity);
+
         return $this;
     }
 
@@ -238,9 +263,9 @@ final class Product extends BaseEntity implements ValidatableInterface
 
     public function isLowStock(): bool
     {
-        return $this->trackStock && 
-               $this->lowStockThreshold !== null && 
-               $this->stock <= $this->lowStockThreshold;
+        return $this->trackStock
+               && $this->lowStockThreshold !== null
+               && $this->stock <= $this->lowStockThreshold;
     }
 
     public function getSku(): ?ProductSku
@@ -257,6 +282,7 @@ final class Product extends BaseEntity implements ValidatableInterface
         } else {
             $this->sku = new ProductSku($sku);
         }
+
         return $this;
     }
 
@@ -268,6 +294,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setIsActive(bool $isActive): static
     {
         $this->isActive = $isActive;
+
         return $this;
     }
 
@@ -279,6 +306,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setIsFeatured(bool $isFeatured): static
     {
         $this->isFeatured = $isFeatured;
+
         return $this;
     }
 
@@ -290,6 +318,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setTrackStock(bool $trackStock): static
     {
         $this->trackStock = $trackStock;
+
         return $this;
     }
 
@@ -301,17 +330,25 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setLowStockThreshold(?int $lowStockThreshold): static
     {
         $this->lowStockThreshold = $lowStockThreshold;
+
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getAttributes(): ?array
     {
         return $this->attributes;
     }
 
+    /**
+     * @param array<string, mixed>|null $attributes
+     */
     public function setAttributes(?array $attributes): static
     {
         $this->attributes = $attributes;
+
         return $this;
     }
 
@@ -326,6 +363,7 @@ final class Product extends BaseEntity implements ValidatableInterface
             $this->attributes = [];
         }
         $this->attributes[$key] = $value;
+
         return $this;
     }
 
@@ -334,6 +372,7 @@ final class Product extends BaseEntity implements ValidatableInterface
         if ($this->attributes !== null && isset($this->attributes[$key])) {
             unset($this->attributes[$key]);
         }
+
         return $this;
     }
 
@@ -342,103 +381,224 @@ final class Product extends BaseEntity implements ValidatableInterface
         return $this->attributes !== null && array_key_exists($key, $this->attributes);
     }
 
-    public function getVariants(): ?array
+    /**
+     * @return Collection<int, ProductVariant>
+     */
+    public function getVariants(): Collection
     {
         return $this->variants;
     }
 
-    public function setVariants(?array $variants): static
+    public function addVariant(ProductVariant $variant): static
     {
-        $this->variants = $variants;
-        return $this;
-    }
-
-    public function addVariant(array $variant): static
-    {
-        if ($this->variants === null) {
-            $this->variants = [];
-        }
-        $this->variants[] = $variant;
-        return $this;
-    }
-
-    public function getImages(): ?array
-    {
-        return $this->images;
-    }
-
-    public function setImages(?array $images): static
-    {
-        $this->images = $images;
-        return $this;
-    }
-
-    public function addImage(string $url, ?string $alt = null, bool $isPrimary = false): static
-    {
-        if ($this->images === null) {
-            $this->images = [];
-        }
-        
-        $this->images[] = [
-            'url' => $url,
-            'alt' => $alt,
-            'is_primary' => $isPrimary,
-        ];
-        
-        return $this;
-    }
-
-    public function getPrimaryImage(): ?array
-    {
-        if ($this->images === null) {
-            return null;
+        if (!$this->variants->contains($variant)) {
+            $this->variants->add($variant);
+            $variant->setProduct($this);
         }
 
-        foreach ($this->images as $image) {
-            if ($image['is_primary'] ?? false) {
-                return $image;
+        return $this;
+    }
+
+    public function removeVariant(ProductVariant $variant): static
+    {
+        if ($this->variants->removeElement($variant)) {
+            if ($variant->getProduct() === $this) {
+                $variant->setProduct(null);
             }
         }
 
-        return $this->images[0] ?? null;
+        return $this;
     }
 
+    public function clearVariants(): static
+    {
+        foreach ($this->variants as $variant) {
+            if ($variant->getProduct() === $this) {
+                $variant->setProduct(null);
+            }
+        }
+
+        $this->variants->clear();
+
+        return $this;
+    }
+
+    public function findVariantBySku(string $sku): ?ProductVariant
+    {
+        foreach ($this->variants as $variant) {
+            if ($variant->getSku()->getValue() === $sku) {
+                return $variant;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return Collection<int, ProductMedia>
+     */
+    public function getMedia(): Collection
+    {
+        return $this->media;
+    }
+
+    public function addMedia(ProductMedia $media): static
+    {
+        if (!$this->media->contains($media)) {
+            $this->media->add($media);
+            $media->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeMedia(ProductMedia $media): static
+    {
+        if ($this->media->removeElement($media)) {
+            if ($media->getProduct() === $this) {
+                $media->setProduct(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function clearMedia(): static
+    {
+        foreach ($this->media as $media) {
+            if ($media->getProduct() === $this) {
+                $media->setProduct(null);
+            }
+        }
+
+        $this->media->clear();
+
+        return $this;
+    }
+
+    public function getPrimaryMedia(): ?ProductMedia
+    {
+        if ($this->media->isEmpty()) {
+            return null;
+        }
+
+        foreach ($this->media as $media) {
+            if ($media->isPrimary()) {
+                return $media;
+            }
+        }
+
+        if (!($this->media->first() instanceof ProductMedia)) {
+            return null;
+        }
+
+        return $this->media->first();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getPrimaryImage(): ?array
+    {
+        $media = $this->getPrimaryMedia();
+        $asset = $media?->getMediaAsset();
+
+        if ($media === null || $asset === null) {
+            return null;
+        }
+
+        return [
+            'id' => $media->getId(),
+            'asset_id' => $asset->getId(),
+            'url' => $asset->getUrl(),
+            'alt' => $media->getEffectiveAltText(),
+            'is_primary' => $media->isPrimary(),
+            'position' => $media->getPosition(),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getImagePayload(): array
+    {
+        $payload = [];
+        foreach ($this->media as $media) {
+            $asset = $media->getMediaAsset();
+            if ($asset === null) {
+                continue;
+            }
+
+            $payload[] = [
+                'id' => $media->getId(),
+                'asset_id' => $asset->getId(),
+                'url' => $asset->getUrl(),
+                'alt' => $media->getEffectiveAltText(),
+                'is_primary' => $media->isPrimary(),
+                'position' => $media->getPosition(),
+            ];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getImages(): array
+    {
+        return $this->getImagePayload();
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
     public function getSeoData(): ?array
     {
-        return $this->seoData;
+        return $this->seo->isEmpty() ? null : $this->seo->toArray();
     }
 
+    /**
+     * @param array<string, mixed>|null $seoData
+     */
     public function setSeoData(?array $seoData): static
     {
-        $this->seoData = $seoData;
+        if ($seoData === null) {
+            $this->seo = ProductSeo::empty();
+
+            return $this;
+        }
+
+        $title = isset($seoData['title']) && $seoData['title'] !== '' ? (string) $seoData['title'] : null;
+        $description = isset($seoData['description']) && $seoData['description'] !== '' ? (string) $seoData['description'] : null;
+        $keywords = isset($seoData['keywords']) && $seoData['keywords'] !== '' ? (string) $seoData['keywords'] : null;
+
+        $this->seo = new ProductSeo($title, $description, $keywords);
+
         return $this;
     }
 
     public function getSeoTitle(): ?string
     {
-        return $this->seoData['title'] ?? null;
+        return $this->seo->getTitle();
     }
 
     public function setSeoTitle(?string $title): static
     {
-        if ($this->seoData === null) {
-            $this->seoData = [];
-        }
-        $this->seoData['title'] = $title;
+        $this->seo = $this->seo->withTitle($title);
+
         return $this;
     }
 
     public function getSeoDescription(): ?string
     {
-        return $this->seoData['description'] ?? null;
+        return $this->seo->getDescription();
     }
 
     public function setSeoDescription(?string $description): static
     {
-        if ($this->seoData === null) {
-            $this->seoData = [];
-        }
-        $this->seoData['description'] = $description;
+        $this->seo = $this->seo->withDescription($description);
+
         return $this;
     }
 
@@ -450,6 +610,7 @@ final class Product extends BaseEntity implements ValidatableInterface
     public function setCategory(?Category $category): static
     {
         $this->category = $category;
+
         return $this;
     }
 

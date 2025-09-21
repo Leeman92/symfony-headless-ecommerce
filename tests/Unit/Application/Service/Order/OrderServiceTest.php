@@ -50,7 +50,7 @@ final class OrderServiceTest extends TestCase
         $this->service = new OrderService(
             $this->orderRepository,
             $this->productService,
-            $this->entityManager
+            $this->entityManager,
         );
     }
 
@@ -66,15 +66,14 @@ final class OrderServiceTest extends TestCase
 
         $this->entityManager->expects(self::once())
             ->method('wrapInTransaction')
-            ->willReturnCallback(function (callable $callback) {
-                return $callback();
-            });
+            ->willReturnCallback(fn (callable $callback) => $callback());
 
         $this->productService->expects(self::once())
             ->method('reserveStock')
             ->with(1, 2)
             ->willReturnCallback(function (int $_productId, int $quantity) use ($product) {
                 $product->decreaseStock($quantity);
+
                 return $product;
             });
 
@@ -112,14 +111,12 @@ final class OrderServiceTest extends TestCase
             new Address('123 Main St', 'New York', 'NY', '10001', 'US'),
             new Address('123 Main St', 'New York', 'NY', '10001', 'US'),
             'Leave at the front desk',
-            ['source' => 'mobile']
+            ['source' => 'mobile'],
         );
 
         $this->entityManager->expects(self::once())
             ->method('wrapInTransaction')
-            ->willReturnCallback(function (callable $callback) {
-                return $callback();
-            });
+            ->willReturnCallback(fn (callable $callback) => $callback());
 
         $this->productService->expects(self::once())
             ->method('reserveStock')
@@ -150,9 +147,7 @@ final class OrderServiceTest extends TestCase
 
         $this->entityManager->expects(self::once())
             ->method('wrapInTransaction')
-            ->willReturnCallback(function (callable $callback) {
-                return $callback();
-            });
+            ->willReturnCallback(fn (callable $callback) => $callback());
 
         $this->productService->expects(self::once())
             ->method('reserveStock')
@@ -175,9 +170,7 @@ final class OrderServiceTest extends TestCase
 
         $this->entityManager->expects(self::once())
             ->method('wrapInTransaction')
-            ->willReturnCallback(function (callable $callback) {
-                return $callback();
-            });
+            ->willReturnCallback(fn (callable $callback) => $callback());
 
         $this->orderRepository->expects(self::once())
             ->method('save')

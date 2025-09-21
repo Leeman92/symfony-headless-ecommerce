@@ -71,12 +71,12 @@ final class ProductService implements ProductServiceInterface
             $criteria->term(),
             $criteria->categorySlug(),
             $criteria->page(),
-            $criteria->limit()
+            $criteria->limit(),
         );
 
         $total = $this->productRepository->countSearchResults(
             $criteria->term(),
-            $criteria->categorySlug()
+            $criteria->categorySlug(),
         );
 
         return new ProductSearchResult($products, $total, $criteria->page(), $criteria->limit());

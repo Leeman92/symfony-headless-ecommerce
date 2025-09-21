@@ -19,6 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+use function is_array;
+use function is_string;
+
+use const JSON_THROW_ON_ERROR;
+
 #[Route('/products', name: 'api_products_')]
 final class ProductController extends AbstractController
 {
@@ -36,8 +41,8 @@ final class ProductController extends AbstractController
             $result = $this->productService->searchProducts($criteria);
 
             $products = array_map(
-                static fn($product) => ProductTransformer::toArray($product),
-                iterator_to_array($result)
+                static fn ($product) => ProductTransformer::toArray($product),
+                iterator_to_array($result),
             );
 
             return $this->json([
@@ -134,17 +139,17 @@ final class ProductController extends AbstractController
 
     private function buildSearchCriteria(Request $request): ProductSearchCriteria
     {
-        $page = max(1, (int) $request->query->get('page', 1));
-        $limit = (int) $request->query->get('limit', 20);
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = $request->query->getInt('limit', 20);
         $limit = max(1, min(100, $limit));
         $term = $request->query->get('term');
         $category = $request->query->get('category');
 
         return new ProductSearchCriteria(
-            $term === null ? null : (string) $term,
-            $category === null ? null : (string) $category,
+            is_string($term) && $term !== '' ? $term : null,
+            is_string($category) && $category !== '' ? $category : null,
             $page,
-            $limit
+            $limit,
         );
     }
 

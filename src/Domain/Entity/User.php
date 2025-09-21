@@ -10,22 +10,24 @@ use App\Domain\ValueObject\Phone;
 use App\Infrastructure\Doctrine\Type\EmailType;
 use App\Infrastructure\Doctrine\Type\PhoneType;
 use App\Infrastructure\Repository\UserRepository;
+use DateTime;
+use DateTimeInterface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Validator\Constraints as Assert;
+
+use function in_array;
 
 /**
  * User entity for authentication and customer management
- * 
+ *
  * Implements Symfony security interfaces for authentication
  * and provides role-based access control.
  */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
 #[ORM\HasLifecycleCallbacks]
-
 final class User extends BaseEntity implements UserInterface, PasswordAuthenticatedUserInterface, ValidatableInterface
 {
     use ValidatableTrait;
@@ -33,6 +35,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     #[ORM\Column(type: EmailType::NAME, unique: true)]
     private Email $email;
 
+    /** @var list<string> */
     #[ORM\Column(type: Types::JSON)]
     private array $roles = [];
 
@@ -52,22 +55,22 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     private bool $isVerified = false;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $lastLoginAt = null;
+    private ?DateTimeInterface $lastLoginAt = null;
 
     public function __construct(
         Email|string $email,
         PersonName|string $firstName,
         string $lastName = '',
-        string $password = ''
+        string $password = '',
     ) {
         $this->email = $email instanceof Email ? $email : new Email($email);
-        
+
         if ($firstName instanceof PersonName) {
             $this->name = $firstName;
         } else {
             $this->name = new PersonName($firstName, $lastName);
         }
-        
+
         $this->password = $password;
     }
 
@@ -79,6 +82,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setEmail(Email|string $email): static
     {
         $this->email = $email instanceof Email ? $email : new Email($email);
+
         return $this;
     }
 
@@ -94,6 +98,8 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
 
     /**
      * @see UserInterface
+     *
+     * @return array<int, string>
      */
     public function getRoles(): array
     {
@@ -101,12 +107,16 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
         // guarantee every user at least has ROLE_USER
         $roles[] = 'ROLE_USER';
 
-        return array_unique($roles);
+        return array_flip(array_flip($roles));
     }
 
+    /**
+     * @param list<string> $roles
+     */
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
+
         return $this;
     }
 
@@ -115,12 +125,14 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
         if (!in_array($role, $this->roles, true)) {
             $this->roles[] = $role;
         }
+
         return $this;
     }
 
     public function removeRole(string $role): static
     {
-        $this->roles = array_values(array_filter($this->roles, fn($r) => $r !== $role));
+        $this->roles = array_values(array_filter($this->roles, fn ($r) => $r !== $role));
+
         return $this;
     }
 
@@ -145,6 +157,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setPassword(string $password): static
     {
         $this->password = $password;
+
         return $this;
     }
 
@@ -153,8 +166,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
      */
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
+        // No transient sensitive data stored on the User entity
     }
 
     public function getName(): PersonName
@@ -165,6 +177,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setName(PersonName $name): static
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -176,6 +189,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setFirstName(string $firstName): static
     {
         $this->name = new PersonName($firstName, $this->name->getLastName());
+
         return $this;
     }
 
@@ -187,6 +201,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setLastName(string $lastName): static
     {
         $this->name = new PersonName($this->name->getFirstName(), $lastName);
+
         return $this;
     }
 
@@ -209,6 +224,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
         } else {
             $this->phone = new Phone($phone);
         }
+
         return $this;
     }
 
@@ -220,6 +236,7 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setIsActive(bool $isActive): static
     {
         $this->isActive = $isActive;
+
         return $this;
     }
 
@@ -231,23 +248,26 @@ final class User extends BaseEntity implements UserInterface, PasswordAuthentica
     public function setIsVerified(bool $isVerified): static
     {
         $this->isVerified = $isVerified;
+
         return $this;
     }
 
-    public function getLastLoginAt(): ?\DateTimeInterface
+    public function getLastLoginAt(): ?DateTimeInterface
     {
         return $this->lastLoginAt;
     }
 
-    public function setLastLoginAt(?\DateTimeInterface $lastLoginAt): static
+    public function setLastLoginAt(?DateTimeInterface $lastLoginAt): static
     {
         $this->lastLoginAt = $lastLoginAt;
+
         return $this;
     }
 
     public function updateLastLogin(): static
     {
-        $this->lastLoginAt = new \DateTime();
+        $this->lastLoginAt = new DateTime();
+
         return $this;
     }
 }

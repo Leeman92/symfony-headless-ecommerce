@@ -6,9 +6,14 @@ namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
 
+use function is_scalar;
+use function strlen;
+use function strtoupper;
+use function trim;
+
 /**
  * Address value object
- * 
+ *
  * Encapsulates address validation and behavior according to DDD principles.
  * Ensures addresses are always in a valid state.
  */
@@ -25,23 +30,26 @@ final readonly class Address
         string $city,
         string $state,
         string $postalCode,
-        string $country
+        string $country,
     ) {
-        $this->validateAndSetStreet($street);
-        $this->validateAndSetCity($city);
-        $this->validateAndSetState($state);
-        $this->validateAndSetPostalCode($postalCode);
-        $this->validateAndSetCountry($country);
+        $this->street = $this->validateStreet($street);
+        $this->city = $this->validateCity($city);
+        $this->state = $this->validateState($state);
+        $this->postalCode = $this->validatePostalCode($postalCode);
+        $this->country = $this->validateCountry($country);
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public static function fromArray(array $data): self
     {
         return new self(
-            $data['street'] ?? '',
-            $data['city'] ?? '',
-            $data['state'] ?? '',
-            $data['postal_code'] ?? '',
-            $data['country'] ?? ''
+            self::valueFromArray($data, 'street'),
+            self::valueFromArray($data, 'city'),
+            self::valueFromArray($data, 'state'),
+            self::valueFromArray($data, 'postal_code'),
+            self::valueFromArray($data, 'country'),
         );
     }
 
@@ -70,6 +78,9 @@ final readonly class Address
         return $this->country;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function toArray(): array
     {
         return [
@@ -91,7 +102,7 @@ final readonly class Address
         return strtoupper($this->country) === strtoupper($countryCode);
     }
 
-    public function equals(Address $other): bool
+    public function equals(self $other): bool
     {
         return $this->street === $other->street
             && $this->city === $other->city
@@ -105,63 +116,78 @@ final readonly class Address
         return $this->getFormattedAddress();
     }
 
-    private function validateAndSetStreet(string $street): void
+    private function validateStreet(string $street): string
     {
         $street = trim($street);
-        if (empty($street)) {
+        if ($street === '') {
             throw new InvalidArgumentException('Street address cannot be empty');
         }
         if (strlen($street) > 255) {
             throw new InvalidArgumentException('Street address cannot be longer than 255 characters');
         }
-        $this->street = $street;
+
+        return $street;
     }
 
-    private function validateAndSetCity(string $city): void
+    private function validateCity(string $city): string
     {
         $city = trim($city);
-        if (empty($city)) {
+        if ($city === '') {
             throw new InvalidArgumentException('City cannot be empty');
         }
         if (strlen($city) > 100) {
             throw new InvalidArgumentException('City cannot be longer than 100 characters');
         }
-        $this->city = $city;
+
+        return $city;
     }
 
-    private function validateAndSetState(string $state): void
+    private function validateState(string $state): string
     {
         $state = trim($state);
-        if (empty($state)) {
+        if ($state === '') {
             throw new InvalidArgumentException('State cannot be empty');
         }
         if (strlen($state) > 100) {
             throw new InvalidArgumentException('State cannot be longer than 100 characters');
         }
-        $this->state = $state;
+
+        return $state;
     }
 
-    private function validateAndSetPostalCode(string $postalCode): void
+    private function validatePostalCode(string $postalCode): string
     {
         $postalCode = trim($postalCode);
-        if (empty($postalCode)) {
+        if ($postalCode === '') {
             throw new InvalidArgumentException('Postal code cannot be empty');
         }
         if (strlen($postalCode) > 20) {
             throw new InvalidArgumentException('Postal code cannot be longer than 20 characters');
         }
-        $this->postalCode = $postalCode;
+
+        return $postalCode;
     }
 
-    private function validateAndSetCountry(string $country): void
+    private function validateCountry(string $country): string
     {
-        $country = trim(strtoupper($country));
-        if (empty($country)) {
+        $country = strtoupper(trim($country));
+        if ($country === '') {
             throw new InvalidArgumentException('Country cannot be empty');
         }
         if (strlen($country) !== 2) {
             throw new InvalidArgumentException('Country must be a 2-letter ISO code');
         }
-        $this->country = $country;
+
+        return $country;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function valueFromArray(array $data, string $key): string
+    {
+        $value = $data[$key] ?? '';
+
+        return is_scalar($value) ? (string) $value : '';
     }
 }

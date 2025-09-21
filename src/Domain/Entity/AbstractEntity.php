@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * Abstract base entity providing common functionality
- * 
+ *
  * All domain entities should extend this class to ensure
  * consistent ID handling and basic entity behavior.
  */

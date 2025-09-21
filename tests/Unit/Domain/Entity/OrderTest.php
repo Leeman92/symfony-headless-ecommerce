@@ -17,6 +17,7 @@ use App\Domain\ValueObject\OrderNumber;
 use App\Domain\ValueObject\PersonName;
 use App\Domain\ValueObject\Phone;
 use App\Domain\ValueObject\Slug;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -61,17 +62,19 @@ final class OrderTest extends TestCase
         $email = new Email('guest@example.com');
         $name = new PersonName('Jane', 'Smith');
         $phone = new Phone('+1234567890');
-        
+
         $this->order->setGuestEmail($email);
         $this->order->setGuestName($name);
         $this->order->setGuestPhone($phone);
 
+        self::assertNotNull($this->order->getGuestEmail());
         self::assertSame('guest@example.com', $this->order->getGuestEmail()->getValue());
         self::assertSame('Jane', $this->order->getGuestFirstName());
         self::assertSame('Smith', $this->order->getGuestLastName());
         self::assertSame('Jane Smith', $this->order->getGuestFullName());
+        self::assertNotNull($this->order->getGuestPhone());
         self::assertSame('+1234567890', $this->order->getGuestPhone()->getValue());
-        
+
         // Test customer methods for guest order
         self::assertSame('guest@example.com', $this->order->getCustomerEmailString());
         self::assertSame('Jane Smith', $this->order->getCustomerNameString());
@@ -96,7 +99,7 @@ final class OrderTest extends TestCase
         $tax = new Money('8.50', 'USD');
         $shipping = new Money('15.00', 'USD');
         $discount = new Money('5.00', 'USD');
-        
+
         $this->order->setSubtotal($subtotal);
         $this->order->setTaxAmount($tax);
         $this->order->setShippingAmount($shipping);
@@ -118,9 +121,9 @@ final class OrderTest extends TestCase
         $this->order->setTaxAmount(new Money('8.50', 'USD'));
         $this->order->setShippingAmount(new Money('15.00', 'USD'));
         $this->order->setDiscountAmount(new Money('5.00', 'USD'));
-        
+
         $this->order->calculateTotal();
-        
+
         // 100.00 + 8.50 + 15.00 - 5.00 = 118.50
         self::assertSame('118.50', $this->order->getTotal()->getAmount());
         self::assertSame(118.5, $this->order->getTotalAsFloat());
@@ -151,9 +154,9 @@ final class OrderTest extends TestCase
 
     public function testInvalidOrderStatus(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid order status: invalid_status');
-        
+
         $this->order->setStatus('invalid_status');
     }
 
@@ -183,7 +186,7 @@ final class OrderTest extends TestCase
     {
         $this->order->setCurrency('eur');
         self::assertSame('EUR', $this->order->getCurrency());
-        
+
         $this->order->setCurrency('GBP');
         self::assertSame('GBP', $this->order->getCurrency());
     }
@@ -198,10 +201,12 @@ final class OrderTest extends TestCase
 
         self::assertSame($billingAddress, $this->order->getBillingAddress());
         self::assertSame($shippingAddress, $this->order->getShippingAddress());
-        
+
         // Test formatted addresses
-        self::assertSame('123 Main St, New York, NY 10001, US', $this->order->getBillingAddress()->getFormattedAddress());
-        self::assertSame('456 Oak Ave, Los Angeles, CA 90210, US', $this->order->getShippingAddress()->getFormattedAddress());
+        self::assertNotNull($this->order->getBillingAddress());
+        self::assertNotNull($this->order->getShippingAddress());
+        self::assertSame('123 Main St, New York, NY 10001, US', $this->order->getBillingAddress()?->getFormattedAddress());
+        self::assertSame('456 Oak Ave, Los Angeles, CA 90210, US', $this->order->getShippingAddress()?->getFormattedAddress());
     }
 
     public function testMetadataHandling(): void

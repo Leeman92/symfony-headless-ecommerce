@@ -14,7 +14,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Product category entity
- * 
+ *
  * Represents product categories with hierarchical structure support.
  */
 #[ORM\Entity]
@@ -30,7 +30,7 @@ final class Category extends BaseEntity implements ValidatableInterface
         min: 2,
         max: 100,
         minMessage: 'Category name must be at least {{ limit }} characters',
-        maxMessage: 'Category name cannot be longer than {{ limit }} characters'
+        maxMessage: 'Category name cannot be longer than {{ limit }} characters',
     )]
     private string $name;
 
@@ -51,10 +51,12 @@ final class Category extends BaseEntity implements ValidatableInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Category $parent = null;
 
+    /** @var Collection<int, Category> */
     #[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
     #[ORM\OrderBy(['sortOrder' => 'ASC', 'name' => 'ASC'])]
     private Collection $children;
 
+    /** @var Collection<int, Product> */
     #[ORM\OneToMany(mappedBy: 'category', targetEntity: Product::class)]
     private Collection $products;
 
@@ -74,6 +76,7 @@ final class Category extends BaseEntity implements ValidatableInterface
     public function setName(string $name): static
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -85,6 +88,7 @@ final class Category extends BaseEntity implements ValidatableInterface
     public function setSlug(Slug $slug): static
     {
         $this->slug = $slug;
+
         return $this;
     }
 
@@ -101,6 +105,7 @@ final class Category extends BaseEntity implements ValidatableInterface
     public function setDescription(?string $description): static
     {
         $this->description = $description;
+
         return $this;
     }
 
@@ -112,6 +117,7 @@ final class Category extends BaseEntity implements ValidatableInterface
     public function setIsActive(bool $isActive): static
     {
         $this->isActive = $isActive;
+
         return $this;
     }
 
@@ -123,44 +129,54 @@ final class Category extends BaseEntity implements ValidatableInterface
     public function setSortOrder(int $sortOrder): static
     {
         $this->sortOrder = $sortOrder;
+
         return $this;
     }
 
-    public function getParent(): ?Category
+    public function getParent(): ?self
     {
         return $this->parent;
     }
 
-    public function setParent(?Category $parent): static
+    public function setParent(?self $parent): static
     {
         $this->parent = $parent;
+
         return $this;
     }
 
+    /**
+     * @return Collection<int, Category>
+     */
     public function getChildren(): Collection
     {
         return $this->children;
     }
 
-    public function addChild(Category $child): static
+    public function addChild(self $child): static
     {
         if (!$this->children->contains($child)) {
             $this->children->add($child);
             $child->setParent($this);
         }
+
         return $this;
     }
 
-    public function removeChild(Category $child): static
+    public function removeChild(self $child): static
     {
         if ($this->children->removeElement($child)) {
             if ($child->getParent() === $this) {
                 $child->setParent(null);
             }
         }
+
         return $this;
     }
 
+    /**
+     * @return Collection<int, Product>
+     */
     public function getProducts(): Collection
     {
         return $this->products;
@@ -172,6 +188,7 @@ final class Category extends BaseEntity implements ValidatableInterface
             $this->products->add($product);
             $product->setCategory($this);
         }
+
         return $this;
     }
 
@@ -182,6 +199,7 @@ final class Category extends BaseEntity implements ValidatableInterface
                 $product->setCategory(null);
             }
         }
+
         return $this;
     }
 
@@ -199,12 +217,12 @@ final class Category extends BaseEntity implements ValidatableInterface
     {
         $level = 0;
         $parent = $this->parent;
-        
+
         while ($parent !== null) {
-            $level++;
+            ++$level;
             $parent = $parent->getParent();
         }
-        
+
         return $level;
     }
 
@@ -212,12 +230,12 @@ final class Category extends BaseEntity implements ValidatableInterface
     {
         $path = [$this->slug->getValue()];
         $parent = $this->parent;
-        
+
         while ($parent !== null) {
             array_unshift($path, $parent->getSlugString());
             $parent = $parent->getParent();
         }
-        
+
         return implode('/', $path);
     }
 

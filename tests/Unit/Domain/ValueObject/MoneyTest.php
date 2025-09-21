@@ -16,7 +16,7 @@ final class MoneyTest extends TestCase
     public function testMoneyCreation(): void
     {
         $money = new Money('99.99', 'USD');
-        
+
         self::assertSame('99.99', $money->getAmount());
         self::assertSame(99.99, $money->getAmountAsFloat());
         self::assertSame(9999, $money->getAmountInCents());
@@ -27,7 +27,7 @@ final class MoneyTest extends TestCase
     public function testMoneyFromFloat(): void
     {
         $money = Money::fromFloat(123.456, 'EUR');
-        
+
         self::assertSame('123.46', $money->getAmount());
         self::assertSame('EUR', $money->getCurrency());
     }
@@ -35,7 +35,7 @@ final class MoneyTest extends TestCase
     public function testMoneyFromCents(): void
     {
         $money = Money::fromCents(12345, 'GBP');
-        
+
         self::assertSame('123.45', $money->getAmount());
         self::assertSame('GBP', $money->getCurrency());
     }
@@ -44,9 +44,9 @@ final class MoneyTest extends TestCase
     {
         $money1 = new Money('10.50', 'USD');
         $money2 = new Money('5.25', 'USD');
-        
+
         $result = $money1->add($money2);
-        
+
         self::assertSame('15.75', $result->getAmount());
         self::assertSame('USD', $result->getCurrency());
     }
@@ -55,9 +55,9 @@ final class MoneyTest extends TestCase
     {
         $money1 = new Money('10.50', 'USD');
         $money2 = new Money('5.25', 'USD');
-        
+
         $result = $money1->subtract($money2);
-        
+
         self::assertSame('5.25', $result->getAmount());
     }
 
@@ -65,7 +65,7 @@ final class MoneyTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Amount cannot be negative');
-        
+
         new Money('-10.00', 'USD');
     }
 
@@ -73,7 +73,7 @@ final class MoneyTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Currency must be 3 characters long');
-        
+
         new Money('10.00', 'US');
     }
 
@@ -81,10 +81,10 @@ final class MoneyTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Cannot perform operation on different currencies');
-        
+
         $money1 = new Money('10.00', 'USD');
         $money2 = new Money('10.00', 'EUR');
-        
+
         $money1->add($money2);
     }
 }

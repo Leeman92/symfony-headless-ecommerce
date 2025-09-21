@@ -9,12 +9,22 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
+use function is_array;
+use function sprintf;
+use function str_replace;
+use function strtoupper;
+
 /**
  * Abstract base repository with common functionality
- * Note: Type hints are minimal to maintain Doctrine compatibility
+ *
+ * @template T of object
+ * @extends ServiceEntityRepository<T>
  */
 abstract class AbstractRepository extends ServiceEntityRepository implements RepositoryInterface
 {
+    /**
+     * @param class-string<T> $entityClass
+     */
     public function __construct(ManagerRegistry $registry, string $entityClass)
     {
         parent::__construct($registry, $entityClass);
@@ -36,26 +46,44 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
      * Find entities by criteria with optional sorting
      * Note: intentionally simple to surface performance refactors later
      */
+    /**
+     * @param array<string, scalar|array<array-key, scalar>|null> $criteria
+     * @param array<string, string|int|null> $sorting
+     * @return list<T>
+     */
     public function findByCriteria(array $criteria, array $sorting = []): array
     {
         $qb = $this->createQueryBuilder('entity');
         $this->applyCriteria($qb, $criteria);
         $this->applySorting($qb, $sorting);
 
-        return $qb->getQuery()->getResult();
+        /** @var list<T> $result */
+        $result = $qb->getQuery()->getResult();
+
+        return $result;
     }
 
-    public function findOneByCriteria(array $criteria, array $sorting = [])
+    /**
+     * @param array<string, scalar|array<array-key, scalar>|null> $criteria
+     * @param array<string, string|int|null> $sorting
+     * @return T|null
+     */
+    public function findOneByCriteria(array $criteria, array $sorting = []): ?object
     {
         $qb = $this->createQueryBuilder('entity');
         $this->applyCriteria($qb, $criteria);
         $this->applySorting($qb, $sorting);
 
-        return $qb->getQuery()->getOneOrNullResult();
+        /** @var T|null $result */
+        $result = $qb->getQuery()->getOneOrNullResult();
+
+        return $result;
     }
 
     /**
      * Apply exact-match filters to a query builder
+     *
+     * @param array<string, scalar|array<array-key, scalar>|null> $criteria
      */
     protected function applyCriteria(QueryBuilder $qb, array $criteria, string $alias = 'entity'): void
     {
@@ -79,6 +107,8 @@ abstract class AbstractRepository extends ServiceEntityRepository implements Rep
 
     /**
      * Apply order by clauses from an array of field => direction
+     *
+     * @param array<string, string|int|null> $sorting
      */
     protected function applySorting(QueryBuilder $qb, array $sorting, string $alias = 'entity'): void
     {

@@ -7,6 +7,9 @@ namespace App\Infrastructure\Doctrine\Type;
 use App\Domain\ValueObject\Email;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\StringType;
+use InvalidArgumentException;
+
+use function is_string;
 
 /**
  * Custom Doctrine type for Email value object
@@ -35,7 +38,7 @@ final class EmailType extends StringType
         }
 
         if (!$value instanceof Email) {
-            throw new \InvalidArgumentException('Expected Email value object or string');
+            throw new InvalidArgumentException('Expected Email value object or string');
         }
 
         return $value->getValue();

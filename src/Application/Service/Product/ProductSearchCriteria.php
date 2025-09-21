@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Application\Service\Product;
 
+use InvalidArgumentException;
+
+use function sprintf;
+
 final class ProductSearchCriteria
 {
     private ?string $term;
@@ -49,7 +53,7 @@ final class ProductSearchCriteria
     private function guardPositiveInt(int $value, string $field): int
     {
         if ($value < 1) {
-            throw new \InvalidArgumentException(sprintf('%s must be greater than zero', ucfirst($field)));
+            throw new InvalidArgumentException(sprintf('%s must be greater than zero', ucfirst($field)));
         }
 
         return $value;

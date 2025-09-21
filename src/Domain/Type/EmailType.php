@@ -10,7 +10,7 @@ use Doctrine\DBAL\Types\StringType;
 
 /**
  * Custom Doctrine type for Email value object
- * 
+ *
  * Handles conversion between Email value object and database string representation.
  */
 final class EmailType extends StringType

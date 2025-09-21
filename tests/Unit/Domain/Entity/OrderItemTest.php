@@ -29,7 +29,7 @@ final class OrderItemTest extends TestCase
         $price = new Money('99.99', 'USD');
         $this->product = new Product('Test Product', $slug, $price, $category);
         $this->product->setSku(new ProductSku('TEST-SKU-001'));
-        
+
         $this->orderItem = new OrderItem($this->product, 2);
     }
 
@@ -38,7 +38,7 @@ final class OrderItemTest extends TestCase
         self::assertSame(0, $this->orderItem->getProductId());
         self::assertSame('Test Product', $this->orderItem->getProductName());
         self::assertInstanceOf(ProductSku::class, $this->orderItem->getProductSku());
-        self::assertSame('TEST-SKU-001', $this->orderItem->getProductSku()?->getValue());
+        self::assertSame('TEST-SKU-001', $this->orderItem->getProductSku()->getValue());
         self::assertSame('99.99', $this->orderItem->getUnitPrice()->getAmount());
         self::assertSame(99.99, $this->orderItem->getUnitPriceAsFloat());
         self::assertSame(2, $this->orderItem->getQuantity());
@@ -49,7 +49,7 @@ final class OrderItemTest extends TestCase
     public function testOrderItemWithCustomPrice(): void
     {
         $orderItem = new OrderItem($this->product, 3, new Money('89.99', 'USD'));
-        
+
         self::assertSame(0, $orderItem->getProductId());
         self::assertSame('89.99', $orderItem->getUnitPrice()->getAmount());
         self::assertSame(89.99, $orderItem->getUnitPriceAsFloat());
@@ -62,7 +62,7 @@ final class OrderItemTest extends TestCase
         $category = new Category('Books', Slug::fromString('books'));
         $productWithoutSku = new Product('Book Title', Slug::fromString('book-title'), new Money('19.99'), $category);
         $orderItem = new OrderItem($productWithoutSku, 1);
-        
+
         self::assertSame(0, $orderItem->getProductId());
         self::assertNull($orderItem->getProductSku());
         self::assertSame('Book Title', $orderItem->getProductName());
@@ -71,7 +71,7 @@ final class OrderItemTest extends TestCase
     public function testQuantityUpdate(): void
     {
         $this->orderItem->setQuantity(5);
-        
+
         self::assertSame(5, $this->orderItem->getQuantity());
         self::assertSame('499.95', $this->orderItem->getTotalPrice()->getAmount());
         self::assertSame(499.95, $this->orderItem->getTotalPriceAsFloat());
@@ -80,7 +80,7 @@ final class OrderItemTest extends TestCase
     public function testUnitPriceUpdate(): void
     {
         $this->orderItem->setUnitPrice(new Money('79.99', 'USD'));
-        
+
         self::assertSame('79.99', $this->orderItem->getUnitPrice()->getAmount());
         self::assertSame(79.99, $this->orderItem->getUnitPriceAsFloat());
         self::assertSame('159.98', $this->orderItem->getTotalPrice()->getAmount());
@@ -90,7 +90,7 @@ final class OrderItemTest extends TestCase
     public function testManualTotalPriceCalculation(): void
     {
         $this->orderItem->calculateTotalPrice();
-        
+
         // Should recalculate based on current unit price and quantity
         self::assertSame('199.98', $this->orderItem->getTotalPrice()->getAmount());
     }
@@ -98,18 +98,18 @@ final class OrderItemTest extends TestCase
     public function testOrderAssociation(): void
     {
         $order = new Order(new OrderNumber('ORD-2024-001'));
-        
+
         self::assertNull($this->orderItem->getOrder());
-        
+
         $this->orderItem->setOrder($order);
-        
+
         self::assertSame($order, $this->orderItem->getOrder());
     }
 
     public function testProductNameUpdate(): void
     {
         $this->orderItem->setProductName('Updated Product Name');
-        
+
         self::assertSame('Updated Product Name', $this->orderItem->getProductName());
         // Original product name should remain unchanged
         self::assertSame('Test Product', $this->product->getName());
@@ -118,7 +118,7 @@ final class OrderItemTest extends TestCase
     public function testProductSkuUpdate(): void
     {
         $this->orderItem->setProductSku('NEW-SKU-001');
-        
+
         self::assertSame('NEW-SKU-001', $this->orderItem->getProductSku()?->getValue());
         // Original product SKU should remain unchanged
         self::assertSame('TEST-SKU-001', $this->product->getSku()?->getValue());
@@ -129,7 +129,7 @@ final class OrderItemTest extends TestCase
         // OrderItem needs to be associated with an order to be valid
         $order = new Order(new OrderNumber('ORD-2024-001'));
         $this->orderItem->setOrder($order);
-        
+
         // Test valid order item
         self::assertTrue($this->orderItem->isValid());
         self::assertEmpty($this->orderItem->getValidationErrors());
@@ -138,10 +138,10 @@ final class OrderItemTest extends TestCase
     public function testOrderItemToString(): void
     {
         self::assertSame('Test Product x 2', (string) $this->orderItem);
-        
+
         $this->orderItem->setQuantity(1);
         self::assertSame('Test Product x 1', (string) $this->orderItem);
-        
+
         $this->orderItem->setProductName('Custom Product Name');
         self::assertSame('Custom Product Name x 1', (string) $this->orderItem);
     }
@@ -151,7 +151,7 @@ final class OrderItemTest extends TestCase
         // Test with price that has more than 2 decimal places
         $this->orderItem->setUnitPrice('33.333');
         $this->orderItem->setQuantity(3);
-        
+
         // Money normalizes to 2 decimal places, truncating extra precision
         self::assertSame('99.99', $this->orderItem->getTotalPrice()->getAmount());
     }
@@ -159,7 +159,7 @@ final class OrderItemTest extends TestCase
     public function testZeroQuantityHandling(): void
     {
         $this->orderItem->setQuantity(0);
-        
+
         self::assertSame(0, $this->orderItem->getQuantity());
         self::assertSame('0.00', $this->orderItem->getTotalPrice()->getAmount());
         self::assertSame(0.0, $this->orderItem->getTotalPriceAsFloat());
@@ -168,7 +168,7 @@ final class OrderItemTest extends TestCase
     public function testLargeQuantityHandling(): void
     {
         $this->orderItem->setQuantity(1000);
-        
+
         self::assertSame(1000, $this->orderItem->getQuantity());
         self::assertSame('99990.00', $this->orderItem->getTotalPrice()->getAmount());
         self::assertSame(99990.0, $this->orderItem->getTotalPriceAsFloat());

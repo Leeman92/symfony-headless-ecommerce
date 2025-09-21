@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Exception;
 
+use function is_int;
+
 /**
  * Exception thrown when a product is not found
  */

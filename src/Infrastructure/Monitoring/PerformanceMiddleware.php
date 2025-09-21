@@ -6,21 +6,33 @@ namespace App\Infrastructure\Monitoring;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
+
+use function getmypid;
+use function memory_get_peak_usage;
+use function memory_get_usage;
+use function microtime;
+use function spl_object_hash;
+use function time;
+
+use const PHP_SAPI;
 
 /**
  * Middleware to collect performance metrics for phase comparison
  */
 final class PerformanceMiddleware
 {
+    /**
+     * @var array<string, array{start_time: float, start_memory: int, endpoint: string, method: string}>
+     */
     private array $requestMetrics = [];
 
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly QueryCounter $queryCounter,
-    ) {}
+    ) {
+    }
 
     public function onKernelRequest(RequestEvent $event): void
     {
@@ -99,11 +111,11 @@ final class PerformanceMiddleware
         if (isset($_SERVER['FRANKENPHP_VERSION'])) {
             return 'frankenphp-worker';
         }
-        
-        if (php_sapi_name() === 'fpm-fcgi') {
+
+        if (PHP_SAPI === 'fpm-fcgi') {
             return 'php-fpm';
         }
-        
+
         return 'unknown';
     }
 }

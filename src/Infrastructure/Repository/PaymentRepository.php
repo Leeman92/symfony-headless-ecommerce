@@ -9,6 +9,9 @@ use App\Domain\Entity\Payment;
 use App\Domain\Repository\PaymentRepositoryInterface;
 use Doctrine\Persistence\ManagerRegistry;
 
+/**
+ * @extends AbstractRepository<Payment>
+ */
 final class PaymentRepository extends AbstractRepository implements PaymentRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
@@ -18,11 +21,17 @@ final class PaymentRepository extends AbstractRepository implements PaymentRepos
 
     public function findByStripePaymentIntentId(string $paymentIntentId): ?Payment
     {
-        return $this->findOneBy(['stripePaymentIntentId' => $paymentIntentId]);
+        /** @var Payment|null $payment */
+        $payment = $this->findOneBy(['stripePaymentIntentId' => $paymentIntentId]);
+
+        return $payment;
     }
 
     public function findOneByOrder(Order $order): ?Payment
     {
-        return $this->findOneBy(['order' => $order]);
+        /** @var Payment|null $payment */
+        $payment = $this->findOneBy(['order' => $order]);
+
+        return $payment;
     }
 }

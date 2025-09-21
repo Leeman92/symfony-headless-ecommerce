@@ -15,6 +15,26 @@ final class ProductTransformer
     public static function toArray(Product $product): array
     {
         $category = $product->getCategory();
+        $comparePrice = $product->getComparePrice();
+        $variants = [];
+        foreach ($product->getVariants() as $variant) {
+            $variantPrice = $variant->getPrice();
+            $variantComparePrice = $variant->getComparePrice();
+
+            $variants[] = [
+                'id' => $variant->getId(),
+                'sku' => $variant->getSku()->getValue(),
+                'name' => $variant->getName(),
+                'price' => $variantPrice !== null ? MoneyTransformer::toArray($variantPrice) : null,
+                'compare_price' => $variantComparePrice !== null ? MoneyTransformer::toArray($variantComparePrice) : null,
+                'stock' => $variant->getStock(),
+                'is_default' => $variant->isDefault(),
+                'position' => $variant->getPosition(),
+                'attributes' => $variant->getAttributeMap(),
+            ];
+        }
+
+        $images = $product->getImagePayload();
 
         return [
             'id' => $product->getId(),
@@ -23,7 +43,7 @@ final class ProductTransformer
             'description' => $product->getDescription(),
             'short_description' => $product->getShortDescription(),
             'price' => MoneyTransformer::toArray($product->getPrice()),
-            'compare_price' => $product->getComparePrice() ? MoneyTransformer::toArray($product->getComparePrice()) : null,
+            'compare_price' => $comparePrice !== null ? MoneyTransformer::toArray($comparePrice) : null,
             'stock' => $product->getStock(),
             'sku' => $product->getSku()?->getValue(),
             'is_active' => $product->isActive(),
@@ -31,8 +51,8 @@ final class ProductTransformer
             'track_stock' => $product->isTrackStock(),
             'low_stock_threshold' => $product->getLowStockThreshold(),
             'attributes' => $product->getAttributes(),
-            'variants' => $product->getVariants(),
-            'images' => $product->getImages(),
+            'variants' => $variants,
+            'images' => $images,
             'seo' => $product->getSeoData(),
             'category' => self::transformCategory($category),
             'created_at' => DateTimeTransformer::toString($product->getCreatedAt()),

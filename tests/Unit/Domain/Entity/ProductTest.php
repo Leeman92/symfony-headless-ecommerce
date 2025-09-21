@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Entity;
 
 use App\Domain\Entity\Category;
+use App\Domain\Entity\MediaAsset;
 use App\Domain\Entity\Product;
+use App\Domain\Entity\ProductMedia;
+use App\Domain\Entity\ProductVariant;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
@@ -26,7 +29,7 @@ final class ProductTest extends TestCase
             'Test Product',
             Slug::fromString('test-product'),
             new Money('99.99'),
-            $this->category
+            $this->category,
         );
     }
 
@@ -45,7 +48,7 @@ final class ProductTest extends TestCase
     public function testPriceHandling(): void
     {
         $this->product->setPrice(new Money('149.50'));
-        
+
         self::assertSame('149.50', $this->product->getPrice()->getAmount());
         self::assertSame(149.50, $this->product->getPriceAsFloat());
     }
@@ -58,7 +61,7 @@ final class ProductTest extends TestCase
         self::assertNull($this->product->getDiscountPercentage());
 
         $this->product->setComparePrice(new Money('149.99'));
-        
+
         self::assertSame('149.99', $this->product->getComparePrice()?->getAmount());
         self::assertSame(149.99, $this->product->getComparePriceAsFloat());
         self::assertTrue($this->product->hasDiscount());
@@ -88,7 +91,7 @@ final class ProductTest extends TestCase
     {
         $this->product->setTrackStock(false);
         $this->product->setStock(0);
-        
+
         self::assertTrue($this->product->isInStock()); // Should be in stock when tracking disabled
     }
 
@@ -96,12 +99,12 @@ final class ProductTest extends TestCase
     {
         $this->product->setStock(5);
         $this->product->setLowStockThreshold(3);
-        
+
         self::assertFalse($this->product->isLowStock());
-        
+
         $this->product->setStock(2);
         self::assertTrue($this->product->isLowStock());
-        
+
         $this->product->setLowStockThreshold(null);
         self::assertFalse($this->product->isLowStock()); // No threshold set
     }
@@ -127,43 +130,69 @@ final class ProductTest extends TestCase
 
     public function testVariantHandling(): void
     {
-        self::assertNull($this->product->getVariants());
+        self::assertSame(0, $this->product->getVariants()->count());
 
-        $variant1 = ['color' => 'red', 'size' => 'M', 'sku' => 'TEST-RED-M'];
-        $variant2 = ['color' => 'blue', 'size' => 'L', 'sku' => 'TEST-BLUE-L'];
+        $variantRed = new ProductVariant($this->product, new ProductSku('TEST-RED-M'));
+        $variantRed->replaceAttributes(['color' => 'red', 'size' => 'M']);
 
-        $this->product->addVariant($variant1);
-        $this->product->addVariant($variant2);
+        $variantBlue = new ProductVariant($this->product, new ProductSku('TEST-BLUE-L'));
+        $variantBlue->replaceAttributes(['color' => 'blue', 'size' => 'L']);
 
-        $variants = $this->product->getVariants();
-        self::assertCount(2, $variants);
-        self::assertSame($variant1, $variants[0]);
-        self::assertSame($variant2, $variants[1]);
+        $this->product->addVariant($variantRed);
+        $this->product->addVariant($variantBlue);
+
+        self::assertSame(2, $this->product->getVariants()->count());
+        self::assertSame('TEST-RED-M', $variantRed->getSku()->getValue());
+        self::assertSame(['color' => 'red', 'size' => 'M'], $variantRed->getAttributeMap());
+        self::assertSame($variantRed, $this->product->findVariantBySku('TEST-RED-M'));
     }
 
     public function testImageHandling(): void
     {
-        self::assertNull($this->product->getImages());
-        self::assertNull($this->product->getPrimaryImage());
+        self::assertSame([], $this->product->getImages());
+        self::assertNull($this->product->getPrimaryMedia());
 
-        $this->product->addImage('/images/product1.jpg', 'Product image 1', false);
-        $this->product->addImage('/images/product2.jpg', 'Product image 2', true);
+        $asset1 = new MediaAsset('/images/product1.jpg', 'Product image 1');
+        $asset2 = new MediaAsset('/images/product2.jpg', 'Product image 2');
+
+        $media1 = new ProductMedia($this->product, $asset1);
+        $media1->setPosition(0);
+        $media2 = new ProductMedia($this->product, $asset2);
+        $media2->markAsPrimary(true);
+
+        $this->product->addMedia($media1);
+        $this->product->addMedia($media2);
 
         $images = $this->product->getImages();
         self::assertCount(2, $images);
+        self::assertTrue($images[1]['is_primary']);
+        self::assertSame('/images/product2.jpg', $images[1]['url']);
 
-        $primaryImage = $this->product->getPrimaryImage();
-        self::assertSame('/images/product2.jpg', $primaryImage['url']);
-        self::assertTrue($primaryImage['is_primary']);
+        $primaryMedia = $this->product->getPrimaryMedia();
+        self::assertSame('/images/product2.jpg', $primaryMedia?->getMediaAsset()?->getUrl());
+        $primaryImagePayload = $this->product->getPrimaryImage();
+        self::assertNotNull($primaryImagePayload);
+        self::assertSame('/images/product2.jpg', $primaryImagePayload['url']);
     }
 
     public function testPrimaryImageFallback(): void
     {
-        $this->product->addImage('/images/product1.jpg', 'Product image 1', false);
-        $this->product->addImage('/images/product2.jpg', 'Product image 2', false);
+        $asset1 = new MediaAsset('/images/product1.jpg', 'Product image 1');
+        $asset2 = new MediaAsset('/images/product2.jpg', 'Product image 2');
 
-        $primaryImage = $this->product->getPrimaryImage();
-        self::assertSame('/images/product1.jpg', $primaryImage['url']); // First image as fallback
+        $media1 = new ProductMedia($this->product, $asset1);
+        $media1->markAsPrimary(false);
+        $media2 = new ProductMedia($this->product, $asset2);
+        $media2->markAsPrimary(false);
+
+        $this->product->addMedia($media1);
+        $this->product->addMedia($media2);
+
+        $primaryMedia = $this->product->getPrimaryMedia();
+        self::assertSame('/images/product1.jpg', $primaryMedia?->getMediaAsset()?->getUrl());
+        $primaryImagePayload = $this->product->getPrimaryImage();
+        self::assertNotNull($primaryImagePayload);
+        self::assertSame('/images/product1.jpg', $primaryImagePayload['url']);
     }
 
     public function testSeoDataHandling(): void
@@ -212,7 +241,8 @@ final class ProductTest extends TestCase
         self::assertNull($this->product->getSku());
 
         $this->product->setSku(new ProductSku('PROD-001'));
-        self::assertSame('PROD-001', $this->product->getSku()?->getValue());
+        self::assertNotNull($this->product->getSku());
+        self::assertSame('PROD-001', $this->product->getSku()->getValue());
     }
 
     public function testValidationWithValidData(): void
@@ -222,9 +252,9 @@ final class ProductTest extends TestCase
             'Valid Product',
             Slug::fromString('valid-product'),
             new Money('29.99'),
-            $category
+            $category,
         );
-        
+
         self::assertTrue($product->isValid());
         self::assertEmpty($product->getValidationErrors());
     }
@@ -236,7 +266,7 @@ final class ProductTest extends TestCase
             '', // Empty name
             Slug::fromString('valid-product'),
             new Money('29.99'),
-            $category
+            $category,
         );
 
         self::assertFalse($product->isValid());

@@ -14,13 +14,18 @@ use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\OrderNumber;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+use Stringable;
+
+use function is_array;
+use function is_string;
+use function sprintf;
 
 final class OrderService implements OrderServiceInterface
 {
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly ProductServiceInterface $productService,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -175,12 +180,20 @@ final class OrderService implements OrderServiceInterface
     }
 
     /**
-     * @param array<string, string[]> $errors
+     * @param array<string, list<string|Stringable>> $errors
+     * @throws InvalidOrderDataException
      */
     private function throwInvalidOrderDataFromErrors(string $context, array $errors): void
     {
         $firstViolation = reset($errors);
-        $message = is_array($firstViolation) ? (string) ($firstViolation[0] ?? 'Unknown validation error') : 'Unknown validation error';
+        $message = 'Unknown validation error';
+
+        if (is_array($firstViolation)) {
+            $firstMessage = $firstViolation[0] ?? null;
+            if (is_string($firstMessage)) {
+                $message = $firstMessage;
+            }
+        }
 
         throw new InvalidOrderDataException(sprintf('Validation failed for %s: %s', $context, $message));
     }
@@ -188,25 +201,17 @@ final class OrderService implements OrderServiceInterface
     private function assertMoneyCurrency(Money $money, string $expectedCurrency, string $field): void
     {
         if ($money->getCurrency() !== $expectedCurrency) {
-            throw new InvalidOrderDataException(sprintf(
-                '%s currency mismatch. Expected %s, got %s',
-                ucfirst($field),
-                $expectedCurrency,
-                $money->getCurrency()
-            ));
+            throw new InvalidOrderDataException(sprintf('%s currency mismatch. Expected %s, got %s', ucfirst($field), $expectedCurrency, $money->getCurrency()));
         }
     }
 
-    private function runInTransaction(callable $operation)
+    /**
+     * @template TReturn
+     * @param callable():TReturn $operation
+     * @return TReturn
+     */
+    private function runInTransaction(callable $operation): mixed
     {
-        if (is_callable([$this->entityManager, 'wrapInTransaction'])) {
-            return $this->entityManager->wrapInTransaction(static function () use ($operation) {
-                return $operation();
-            });
-        }
-
-        return $this->entityManager->transactional(static function () use ($operation) {
-            return $operation();
-        });
+        return $this->entityManager->wrapInTransaction(static fn () => $operation());
     }
 }

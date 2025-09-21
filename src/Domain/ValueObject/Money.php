@@ -6,37 +6,41 @@ namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
 
+use function strlen;
+
 /**
  * Money value object
- * 
+ *
  * Encapsulates monetary amounts with currency according to DDD principles.
  * Ensures monetary calculations are always precise and currency-aware.
  */
 final readonly class Money
 {
+    public const DEFAULT_CURRENCY = 'USD';
+
     private string $amount;
     private string $currency;
 
-    public function __construct(string $amount, string $currency = 'USD')
+    public function __construct(string $amount, string $currency = self::DEFAULT_CURRENCY)
     {
         $this->validateAmount($amount);
         $this->validateCurrency($currency);
-        
+
         $this->amount = $this->normalizeAmount($amount);
         $this->currency = strtoupper($currency);
     }
 
-    public static function fromFloat(float $amount, string $currency = 'USD'): self
+    public static function fromFloat(float $amount, string $currency = self::DEFAULT_CURRENCY): self
     {
         return new self(number_format($amount, 2, '.', ''), $currency);
     }
 
-    public static function fromCents(int $cents, string $currency = 'USD'): self
+    public static function fromCents(int $cents, string $currency = self::DEFAULT_CURRENCY): self
     {
         return new self(number_format($cents / 100, 2, '.', ''), $currency);
     }
 
-    public static function zero(string $currency = 'USD'): self
+    public static function zero(string $currency = self::DEFAULT_CURRENCY): self
     {
         return new self('0.00', $currency);
     }
@@ -61,23 +65,24 @@ final readonly class Money
         return $this->currency;
     }
 
-    public function add(Money $other): self
+    public function add(self $other): self
     {
         $this->ensureSameCurrency($other);
-        
+
         $newAmount = $this->getAmountAsFloat() + $other->getAmountAsFloat();
+
         return self::fromFloat($newAmount, $this->currency);
     }
 
-    public function subtract(Money $other): self
+    public function subtract(self $other): self
     {
         $this->ensureSameCurrency($other);
-        
+
         $newAmount = $this->getAmountAsFloat() - $other->getAmountAsFloat();
         if ($newAmount < 0) {
             throw new InvalidArgumentException('Cannot subtract to negative amount');
         }
-        
+
         return self::fromFloat($newAmount, $this->currency);
     }
 
@@ -86,8 +91,9 @@ final readonly class Money
         if ($multiplier < 0) {
             throw new InvalidArgumentException('Multiplier cannot be negative');
         }
-        
+
         $newAmount = $this->getAmountAsFloat() * $multiplier;
+
         return self::fromFloat($newAmount, $this->currency);
     }
 
@@ -101,19 +107,21 @@ final readonly class Money
         return $this->getAmountAsFloat() > 0.0;
     }
 
-    public function isGreaterThan(Money $other): bool
+    public function isGreaterThan(self $other): bool
     {
         $this->ensureSameCurrency($other);
+
         return $this->getAmountAsFloat() > $other->getAmountAsFloat();
     }
 
-    public function isLessThan(Money $other): bool
+    public function isLessThan(self $other): bool
     {
         $this->ensureSameCurrency($other);
+
         return $this->getAmountAsFloat() < $other->getAmountAsFloat();
     }
 
-    public function equals(Money $other): bool
+    public function equals(self $other): bool
     {
         return $this->amount === $other->amount && $this->currency === $other->currency;
     }
@@ -121,10 +129,10 @@ final readonly class Money
     public function format(): string
     {
         return match ($this->currency) {
-            'USD' => '$' . $this->amount,
-            'EUR' => '€' . $this->amount,
-            'GBP' => '£' . $this->amount,
-            default => $this->amount . ' ' . $this->currency,
+            'USD' => '$'.$this->amount,
+            'EUR' => '€'.$this->amount,
+            'GBP' => '£'.$this->amount,
+            default => $this->amount.' '.$this->currency,
         };
     }
 
@@ -160,12 +168,10 @@ final readonly class Money
         return number_format((float) $amount, 2, '.', '');
     }
 
-    private function ensureSameCurrency(Money $other): void
+    private function ensureSameCurrency(self $other): void
     {
         if ($this->currency !== $other->currency) {
-            throw new InvalidArgumentException(
-                "Cannot perform operation on different currencies: {$this->currency} and {$other->currency}"
-            );
+            throw new InvalidArgumentException("Cannot perform operation on different currencies: {$this->currency} and {$other->currency}");
         }
     }
 }

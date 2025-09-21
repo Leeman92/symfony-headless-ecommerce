@@ -13,6 +13,7 @@ use App\Infrastructure\Doctrine\Type\OrderNumberType;
 use App\Infrastructure\Doctrine\Type\PhoneType;
 use App\Infrastructure\Doctrine\Type\ProductSkuType;
 use App\Infrastructure\Doctrine\Type\SlugType;
+use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,22 +29,22 @@ final class TestEntityManagerFactory
         self::registerTypes();
 
         $entityPaths = array_merge([
-            __DIR__ . '/../../../src/Domain/Entity',
+            __DIR__.'/../../../src/Domain/Entity',
         ], $extraEntityPaths);
 
         $config = ORMSetup::createAttributeMetadataConfiguration($entityPaths, true);
 
-        $entityManager = EntityManager::create([
+        $connection = DriverManager::getConnection([
             'driver' => 'pdo_sqlite',
             'memory' => true,
-        ], $config);
+        ]);
+
+        $entityManager = new EntityManager($connection, $config);
 
         $platform = $entityManager->getConnection()->getDatabasePlatform();
 
         foreach (array_keys(self::customTypes()) as $name) {
-            if (method_exists($platform, 'registerDoctrineTypeMapping')) {
-                $platform->registerDoctrineTypeMapping($name, $name);
-            }
+            $platform->registerDoctrineTypeMapping($name, $name);
         }
 
         return $entityManager;

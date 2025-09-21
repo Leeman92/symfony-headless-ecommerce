@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Domain\Entity;
 
-use App\Domain\Entity\Product;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Infrastructure\Doctrine\Type\MoneyType;
 use App\Infrastructure\Doctrine\Type\ProductSkuType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use InvalidArgumentException;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Order item entity representing individual products in an order
- * 
+ *
  * Stores product information at the time of purchase to maintain
  * historical accuracy even if product details change later.
  */
@@ -58,10 +58,10 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     public function __construct(
         Product $product,
         int $quantity,
-        Money|string|null $unitPrice = null
+        Money|string|null $unitPrice = null,
     ) {
         $productId = $product->getId();
-        $this->productId = $productId === null ? 0 : (int) $productId;
+        $this->productId = $productId ?? 0;
         $this->productName = $product->getName();
         $this->productSku = $product->getSku();
 
@@ -85,6 +85,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     public function setOrder(?Order $order): static
     {
         $this->order = $order;
+
         return $this;
     }
 
@@ -96,10 +97,11 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     public function setProductId(int $productId): static
     {
         if ($productId < 0) {
-            throw new \InvalidArgumentException('Product reference cannot be negative');
+            throw new InvalidArgumentException('Product reference cannot be negative');
         }
 
         $this->productId = $productId;
+
         return $this;
     }
 
@@ -111,6 +113,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     public function setProductName(string $productName): static
     {
         $this->productName = $productName;
+
         return $this;
     }
 
@@ -128,6 +131,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         } else {
             $this->productSku = new ProductSku($productSku);
         }
+
         return $this;
     }
 
@@ -145,6 +149,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         }
 
         $this->calculateTotalPrice();
+
         return $this;
     }
 
@@ -162,6 +167,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     {
         $this->quantity = $quantity;
         $this->calculateTotalPrice();
+
         return $this;
     }
 
@@ -177,6 +183,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
         } else {
             $this->totalPrice = new Money($totalPrice, $this->unitPrice->getCurrency());
         }
+
         return $this;
     }
 
@@ -188,6 +195,7 @@ final class OrderItem extends BaseEntity implements ValidatableInterface
     public function calculateTotalPrice(): static
     {
         $this->totalPrice = $this->unitPrice->multiply((float) $this->quantity);
+
         return $this;
     }
 

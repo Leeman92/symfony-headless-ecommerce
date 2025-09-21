@@ -7,9 +7,13 @@ namespace App\Domain\ValueObject;
 use Doctrine\ORM\Mapping as ORM;
 use InvalidArgumentException;
 
+use function strlen;
+use function strtoupper;
+use function trim;
+
 /**
  * Person name value object
- * 
+ *
  * Encapsulates person name validation and behavior according to DDD principles.
  * Ensures names are always in a valid state.
  */
@@ -27,11 +31,11 @@ final readonly class PersonName
         $firstName = trim($firstName);
         $lastName = trim($lastName);
 
-        if (empty($firstName)) {
+        if ($firstName === '') {
             throw new InvalidArgumentException('First name cannot be empty');
         }
 
-        if (empty($lastName)) {
+        if ($lastName === '') {
             throw new InvalidArgumentException('Last name cannot be empty');
         }
 
@@ -59,17 +63,17 @@ final readonly class PersonName
 
     public function getFullName(): string
     {
-        return $this->firstName . ' ' . $this->lastName;
+        return $this->firstName.' '.$this->lastName;
     }
 
     public function getInitials(): string
     {
-        return strtoupper($this->firstName[0] . $this->lastName[0]);
+        return strtoupper($this->firstName[0].$this->lastName[0]);
     }
 
-    public function equals(PersonName $other): bool
+    public function equals(self $other): bool
     {
-        return $this->firstName === $other->firstName 
+        return $this->firstName === $other->firstName
             && $this->lastName === $other->lastName;
     }
 

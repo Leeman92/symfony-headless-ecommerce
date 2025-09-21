@@ -9,6 +9,7 @@ use App\Domain\ValueObject\Email;
 use App\Domain\ValueObject\PersonName;
 use App\Infrastructure\Repository\UserRepository;
 use App\Tests\Support\Doctrine\DoctrineRepositoryTestCase;
+use http\Exception\RuntimeException;
 
 final class UserRepositoryTest extends DoctrineRepositoryTestCase
 {
@@ -17,6 +18,9 @@ final class UserRepositoryTest extends DoctrineRepositoryTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (null === $this->managerRegistry) {
+            throw new RuntimeException('ManagerRegistry cannot be null');
+        }
         $this->repository = new UserRepository($this->managerRegistry);
     }
 
@@ -67,19 +71,22 @@ final class UserRepositoryTest extends DoctrineRepositoryTestCase
         self::assertSame($admin->getId(), $results[0]->getId());
     }
 
+    /**
+     * @param list<string> $roles
+     */
     private function createUser(
         string $email,
         string $firstName = 'Test',
         string $lastName = 'User',
         array $roles = ['ROLE_USER'],
-        bool $active = true
+        bool $active = true,
     ): User {
         $user = new User(new Email($email), new PersonName($firstName, $lastName), '', 'hash');
         $user->setRoles($roles);
         $user->setIsActive($active);
 
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($user);
+        $this->entityManager?->flush();
 
         return $user;
     }

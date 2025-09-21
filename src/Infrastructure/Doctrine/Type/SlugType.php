@@ -7,6 +7,9 @@ namespace App\Infrastructure\Doctrine\Type;
 use App\Domain\ValueObject\Slug;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\StringType;
+use InvalidArgumentException;
+
+use function is_string;
 
 /**
  * Custom Doctrine type for Slug value object
@@ -35,7 +38,7 @@ final class SlugType extends StringType
         }
 
         if (!$value instanceof Slug) {
-            throw new \InvalidArgumentException('Expected Slug value object or string');
+            throw new InvalidArgumentException('Expected Slug value object or string');
         }
 
         return $value->getValue();

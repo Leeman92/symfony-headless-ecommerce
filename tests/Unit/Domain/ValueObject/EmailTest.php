@@ -16,7 +16,7 @@ final class EmailTest extends TestCase
     public function testEmailCreation(): void
     {
         $email = new Email('user@example.com');
-        
+
         self::assertSame('user@example.com', $email->getValue());
         self::assertSame('example.com', $email->getDomain());
         self::assertSame('user', $email->getLocalPart());
@@ -26,7 +26,7 @@ final class EmailTest extends TestCase
     public function testEmailNormalization(): void
     {
         $email = new Email('  USER@EXAMPLE.COM  ');
-        
+
         self::assertSame('user@example.com', $email->getValue());
     }
 
@@ -34,7 +34,7 @@ final class EmailTest extends TestCase
     {
         $gmail = new Email('user@gmail.com');
         $other = new Email('user@example.com');
-        
+
         self::assertTrue($gmail->isGmail());
         self::assertFalse($other->isGmail());
     }
@@ -44,7 +44,7 @@ final class EmailTest extends TestCase
         $email1 = new Email('user@example.com');
         $email2 = new Email('user@example.com');
         $email3 = new Email('other@example.com');
-        
+
         self::assertTrue($email1->equals($email2));
         self::assertFalse($email1->equals($email3));
     }
@@ -53,7 +53,7 @@ final class EmailTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid email format');
-        
+
         new Email('invalid-email');
     }
 
@@ -61,7 +61,7 @@ final class EmailTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Email cannot be empty');
-        
+
         new Email('');
     }
 
@@ -69,15 +69,15 @@ final class EmailTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Email cannot be longer than 180 characters');
-        
-        $longEmail = str_repeat('a', 170) . '@example.com';
+
+        $longEmail = str_repeat('a', 170).'@example.com';
         new Email($longEmail);
     }
 
     public function testEmailToString(): void
     {
         $email = new Email('user@example.com');
-        
+
         self::assertSame('user@example.com', (string) $email);
     }
 }

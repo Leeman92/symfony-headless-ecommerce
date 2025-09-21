@@ -6,7 +6,7 @@ namespace App\Domain\Entity;
 
 /**
  * Trait providing default identifiable functionality
- * 
+ *
  * Uses the entity ID as the default identifier.
  * Can be overridden in specific entities for custom identification.
  */

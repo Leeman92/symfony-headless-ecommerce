@@ -8,8 +8,12 @@ use App\Domain\Entity\User;
 use App\Domain\Repository\UserRepositoryInterface;
 use App\Domain\ValueObject\Email;
 use Doctrine\Persistence\ManagerRegistry;
+
 use function mb_strtolower;
 
+/**
+ * @extends AbstractRepository<User>
+ */
 final class UserRepository extends AbstractRepository implements UserRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
@@ -19,7 +23,7 @@ final class UserRepository extends AbstractRepository implements UserRepositoryI
 
     public function findActiveUserByEmail(Email|string $email): ?User
     {
-        $value = $email instanceof Email ? $email->getValue() : (string) $email;
+        $value = $email instanceof Email ? $email->getValue() : $email;
 
         return $this->createQueryBuilder('user')
             ->andWhere('LOWER(user.email) = :email')
@@ -39,7 +43,7 @@ final class UserRepository extends AbstractRepository implements UserRepositoryI
             ->setMaxResults(max(1, $limit));
 
         if ($term !== null && $term !== '') {
-            $normalized = '%' . mb_strtolower($term) . '%';
+            $normalized = '%'.mb_strtolower($term).'%';
             $qb->andWhere('LOWER(user.email) LIKE :term OR LOWER(user.name.firstName) LIKE :term OR LOWER(user.name.lastName) LIKE :term')
                 ->setParameter('term', $normalized);
         }

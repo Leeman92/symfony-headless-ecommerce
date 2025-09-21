@@ -38,16 +38,22 @@ RUN docker-php-ext-install \
 RUN pecl install xdebug \
  && docker-php-ext-enable xdebug
 
-# Configure Xdebug (disabled by default; enable via env at runtime)
+# Optional: ensure we don't have two enable files
+RUN rm -f /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini || true
+
+# Configure Xdebug once; don't try to expand ${VARS} inside the INI
 RUN set -euo pipefail; \
-    ext_dir="$(php -i | awk -F'=> ' '/^extension_dir/ {print $2}')"; \
-    cat <<EOF > /usr/local/etc/php/conf.d/99-xdebug.ini
-zend_extension=${ext_dir}/xdebug.so
-xdebug.mode=${XDEBUG_MODE:-off}
-xdebug.start_with_request=${XDEBUG_START_WITH_REQUEST:-trigger}
-xdebug.client_port=${XDEBUG_CLIENT_PORT:-9003}
-xdebug.client_host=${XDEBUG_CLIENT_HOST:-host.docker.internal}
-EOF
+  cat > /usr/local/etc/php/conf.d/99-xdebug.ini <<'INI'
+zend_extension=xdebug
+; Keep Xdebug off by default; XDEBUG_MODE env can override at runtime
+xdebug.mode=off
+xdebug.start_with_request=trigger
+xdebug.client_port=9003
+xdebug.client_host=host.docker.internal
+INI
+
+# Default runtime behavior; you can override these with `-e XDEBUG_MODE=...` when running
+ENV XDEBUG_MODE=off XDEBUG_CLIENT_PORT=9003 XDEBUG_CLIENT_HOST=host.docker.internal
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -65,6 +71,9 @@ RUN composer install --no-scripts --no-autoloader --no-dev --prefer-dist
 
 # Copy application code
 COPY . .
+
+# Copy custom PHP configuration overrides (e.g., memory limits)
+COPY docker/php-fpm/conf.d/ /usr/local/etc/php/conf.d/
 
 # Fix git ownership issue for Composer
 RUN git config --global --add safe.directory /var/www/html || true

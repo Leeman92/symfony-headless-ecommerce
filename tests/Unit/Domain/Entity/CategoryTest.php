@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Domain\Entity;
 
 use App\Domain\Entity\Category;
 use App\Domain\ValueObject\Slug;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -37,9 +38,9 @@ final class CategoryTest extends TestCase
     {
         $parent = new Category('Electronics', Slug::fromString('electronics'));
         $child = new Category('Smartphones', Slug::fromString('smartphones'));
-        
+
         $parent->addChild($child);
-        
+
         self::assertTrue($parent->hasChildren());
         self::assertFalse($child->hasChildren());
         self::assertTrue($parent->isRoot());
@@ -52,10 +53,10 @@ final class CategoryTest extends TestCase
     {
         $parent = new Category('Electronics', Slug::fromString('electronics'));
         $child = new Category('Smartphones', Slug::fromString('smartphones'));
-        
+
         $parent->addChild($child);
         self::assertTrue($parent->getChildren()->contains($child));
-        
+
         $parent->removeChild($child);
         self::assertFalse($parent->getChildren()->contains($child));
         self::assertNull($child->getParent());
@@ -66,10 +67,10 @@ final class CategoryTest extends TestCase
         $root = new Category('Electronics', Slug::fromString('electronics'));
         $level1 = new Category('Mobile', Slug::fromString('mobile'));
         $level2 = new Category('Smartphones', Slug::fromString('smartphones'));
-        
+
         $root->addChild($level1);
         $level1->addChild($level2);
-        
+
         self::assertSame(0, $root->getLevel());
         self::assertSame(1, $level1->getLevel());
         self::assertSame(2, $level2->getLevel());
@@ -80,10 +81,10 @@ final class CategoryTest extends TestCase
         $root = new Category('Electronics', Slug::fromString('electronics'));
         $level1 = new Category('Mobile', Slug::fromString('mobile'));
         $level2 = new Category('Smartphones', Slug::fromString('smartphones'));
-        
+
         $root->addChild($level1);
         $level1->addChild($level2);
-        
+
         self::assertSame('electronics', $root->getPath());
         self::assertSame('electronics/mobile', $level1->getPath());
         self::assertSame('electronics/mobile/smartphones', $level2->getPath());
@@ -92,7 +93,7 @@ final class CategoryTest extends TestCase
     public function testDescriptionHandling(): void
     {
         self::assertNull($this->category->getDescription());
-        
+
         $this->category->setDescription('Category for electronic products');
         self::assertSame('Category for electronic products', $this->category->getDescription());
     }
@@ -100,7 +101,7 @@ final class CategoryTest extends TestCase
     public function testSortOrderHandling(): void
     {
         self::assertSame(0, $this->category->getSortOrder());
-        
+
         $this->category->setSortOrder(10);
         self::assertSame(10, $this->category->getSortOrder());
     }
@@ -108,7 +109,7 @@ final class CategoryTest extends TestCase
     public function testActiveStatus(): void
     {
         self::assertTrue($this->category->isActive());
-        
+
         $this->category->setIsActive(false);
         self::assertFalse($this->category->isActive());
     }
@@ -116,7 +117,7 @@ final class CategoryTest extends TestCase
     public function testValidationWithValidData(): void
     {
         $category = new Category('Valid Category', Slug::fromString('valid-category'));
-        
+
         self::assertTrue($category->isValid());
         self::assertEmpty($category->getValidationErrors());
     }
@@ -124,9 +125,9 @@ final class CategoryTest extends TestCase
     public function testValidationWithInvalidData(): void
     {
         $category = new Category('', Slug::fromString('valid-slug')); // Empty name
-        
+
         self::assertFalse($category->isValid());
-        
+
         $errors = $category->getValidationErrors();
         self::assertArrayHasKey('name', $errors);
     }
@@ -136,11 +137,11 @@ final class CategoryTest extends TestCase
         // Test that fromString() converts invalid characters to valid slug
         $slug = Slug::fromString('invalid slug!');
         self::assertSame('invalid-slug', $slug->getValue());
-        
+
         // Test direct constructor validation with invalid characters
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Slug can only contain lowercase letters, numbers, and hyphens');
-        
+
         // This should throw an exception due to invalid slug format
         new Slug('invalid slug!');
     }

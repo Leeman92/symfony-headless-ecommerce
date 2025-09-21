@@ -42,7 +42,7 @@ final class OrderTransformer
         ];
 
         if ($includeItems) {
-            $data['items'] = array_map(static fn(OrderItem $item) => self::transformItem($item), $order->getItems()->toArray());
+            $data['items'] = array_map(static fn (OrderItem $item) => self::transformItem($item), $order->getItems()->toArray());
         }
 
         if ($includePayment && $order->getPayment() !== null) {
@@ -81,7 +81,7 @@ final class OrderTransformer
             return self::transformGuest(
                 $order->getGuestEmail(),
                 $order->getGuestName(),
-                $order->getGuestPhone()
+                $order->getGuestPhone(),
             );
         }
 

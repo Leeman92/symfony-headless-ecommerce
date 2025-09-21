@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Enum;
 
+use function in_array;
+
 /**
  * User roles enumeration
- * 
+ *
  * Defines available user roles in the system with
  * their string representations for Symfony security.
  */
@@ -18,12 +20,12 @@ enum UserRole: string
 
     /**
      * Get all available roles as array
-     * 
+     *
      * @return string[]
      */
     public static function getAllRoles(): array
     {
-        return array_map(fn(self $role) => $role->value, self::cases());
+        return array_map(fn (self $role) => $role->value, self::cases());
     }
 
     /**

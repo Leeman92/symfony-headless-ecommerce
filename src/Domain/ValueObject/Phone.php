@@ -6,9 +6,16 @@ namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
 
+use function preg_match;
+use function preg_replace;
+use function sprintf;
+use function str_starts_with;
+use function strlen;
+use function substr;
+
 /**
  * Phone number value object
- * 
+ *
  * Encapsulates phone number validation and formatting according to DDD principles.
  * Ensures phone numbers are always in a valid format.
  */
@@ -19,8 +26,8 @@ final readonly class Phone
     public function __construct(string $phone)
     {
         $phone = $this->normalizePhone($phone);
-        
-        if (empty($phone)) {
+
+        if ($phone === '') {
             throw new InvalidArgumentException('Phone number cannot be empty');
         }
 
@@ -28,7 +35,7 @@ final readonly class Phone
             throw new InvalidArgumentException('Phone number must be between 10 and 20 characters');
         }
 
-        if (!preg_match('/^\+?[1-9]\d{1,14}$/', $phone)) {
+        if (preg_match('/^\+?[1-9]\d{1,14}$/', $phone) !== 1) {
             throw new InvalidArgumentException('Invalid phone number format');
         }
 
@@ -55,7 +62,7 @@ final readonly class Phone
             }
             // Add more country codes as needed
         }
-        
+
         return null;
     }
 
@@ -69,7 +76,7 @@ final readonly class Phone
         };
     }
 
-    public function equals(Phone $other): bool
+    public function equals(self $other): bool
     {
         return $this->value === $other->value;
     }
@@ -83,35 +90,38 @@ final readonly class Phone
     {
         // Remove all non-digit characters except +
         $normalized = preg_replace('/[^\d+]/', '', $phone);
-        
+        $normalized ??= '';
+
         // Ensure it starts with + if it's an international number
         if (strlen($normalized) > 10 && !str_starts_with($normalized, '+')) {
-            $normalized = '+' . $normalized;
+            $normalized = '+'.$normalized;
         }
-        
+
         return $normalized;
     }
 
     private function formatAsUS(): string
     {
-        $digits = preg_replace('/[^\d]/', '', $this->value);
-        
+        $digits = preg_replace('/[^\d]/', '', $this->value) ?? '';
+
         if (strlen($digits) === 10) {
-            return sprintf('(%s) %s-%s', 
+            return sprintf(
+                '(%s) %s-%s',
                 substr($digits, 0, 3),
                 substr($digits, 3, 3),
-                substr($digits, 6, 4)
+                substr($digits, 6, 4),
             );
         }
-        
+
         if (strlen($digits) === 11 && str_starts_with($digits, '1')) {
-            return sprintf('+1 (%s) %s-%s', 
+            return sprintf(
+                '+1 (%s) %s-%s',
                 substr($digits, 1, 3),
                 substr($digits, 4, 3),
-                substr($digits, 7, 4)
+                substr($digits, 7, 4),
             );
         }
-        
+
         return $this->value;
     }
 

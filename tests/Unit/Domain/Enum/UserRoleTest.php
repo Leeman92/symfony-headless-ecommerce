@@ -22,7 +22,7 @@ final class UserRoleTest extends TestCase
     public function testGetAllRoles(): void
     {
         $allRoles = UserRole::getAllRoles();
-        
+
         self::assertContains('ROLE_USER', $allRoles);
         self::assertContains('ROLE_ADMIN', $allRoles);
         self::assertContains('ROLE_SUPER_ADMIN', $allRoles);
@@ -48,7 +48,7 @@ final class UserRoleTest extends TestCase
         self::assertSame(1, UserRole::USER->getLevel());
         self::assertSame(2, UserRole::ADMIN->getLevel());
         self::assertSame(3, UserRole::SUPER_ADMIN->getLevel());
-        
+
         // Test hierarchy
         self::assertLessThan(UserRole::ADMIN->getLevel(), UserRole::USER->getLevel());
         self::assertLessThan(UserRole::SUPER_ADMIN->getLevel(), UserRole::ADMIN->getLevel());

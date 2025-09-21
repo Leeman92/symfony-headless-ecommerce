@@ -11,6 +11,9 @@ use App\Domain\ValueObject\Email;
 use App\Domain\ValueObject\OrderNumber;
 use Doctrine\Persistence\ManagerRegistry;
 
+/**
+ * @extends AbstractRepository<Order>
+ */
 final class OrderRepository extends AbstractRepository implements OrderRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
@@ -20,7 +23,7 @@ final class OrderRepository extends AbstractRepository implements OrderRepositor
 
     public function findByOrderNumber(OrderNumber|string $orderNumber): ?Order
     {
-        $value = $orderNumber instanceof OrderNumber ? $orderNumber->getValue() : (string) $orderNumber;
+        $value = $orderNumber instanceof OrderNumber ? $orderNumber->getValue() : $orderNumber;
 
         return $this->createQueryBuilder('orderRecord')
             ->andWhere('orderRecord.orderNumber = :orderNumber')
@@ -42,7 +45,7 @@ final class OrderRepository extends AbstractRepository implements OrderRepositor
 
     public function findOrdersForGuestEmail(Email|string $email, int $limit = 10): array
     {
-        $value = $email instanceof Email ? $email->getValue() : (string) $email;
+        $value = $email instanceof Email ? $email->getValue() : $email;
 
         return $this->createQueryBuilder('orderRecord')
             ->andWhere('orderRecord.guestEmail = :guestEmail')

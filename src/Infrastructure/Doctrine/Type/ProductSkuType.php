@@ -7,6 +7,7 @@ namespace App\Infrastructure\Doctrine\Type;
 use App\Domain\ValueObject\ProductSku;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\StringType;
+use InvalidArgumentException;
 
 /**
  * Custom Doctrine type for ProductSku value object
@@ -31,7 +32,7 @@ final class ProductSkuType extends StringType
         }
 
         if (!$value instanceof ProductSku) {
-            throw new \InvalidArgumentException('Expected ProductSku value object');
+            throw new InvalidArgumentException('Expected ProductSku value object');
         }
 
         return $value->getValue();

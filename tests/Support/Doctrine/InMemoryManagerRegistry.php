@@ -7,12 +7,13 @@ namespace App\Tests\Support\Doctrine;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\ObjectManager;
+use Doctrine\Persistence\ObjectRepository;
 
 final class InMemoryManagerRegistry implements ManagerRegistry
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $managerName = 'default'
+        private readonly string $managerName = 'default',
     ) {
     }
 
@@ -54,6 +55,7 @@ final class InMemoryManagerRegistry implements ManagerRegistry
     public function resetManager(?string $name = null): ObjectManager
     {
         $this->entityManager->clear();
+
         return $this->entityManager;
     }
 
@@ -62,12 +64,12 @@ final class InMemoryManagerRegistry implements ManagerRegistry
         return [$this->managerName => $this->managerName];
     }
 
-    public function getRepository(string $persistentObject, ?string $persistentManagerName = null)
+    public function getRepository(string $persistentObject, ?string $persistentManagerName = null): ObjectRepository
     {
         return $this->entityManager->getRepository($persistentObject);
     }
 
-    public function getManagerForClass(string $class): ?ObjectManager
+    public function getManagerForClass(string $class): ObjectManager
     {
         return $this->entityManager;
     }

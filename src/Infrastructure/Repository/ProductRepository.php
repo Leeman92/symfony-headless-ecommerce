@@ -7,8 +7,12 @@ namespace App\Infrastructure\Repository;
 use App\Domain\Entity\Product;
 use App\Domain\Repository\ProductRepositoryInterface;
 use Doctrine\Persistence\ManagerRegistry;
+
 use function mb_strtolower;
 
+/**
+ * @extends AbstractRepository<Product>
+ */
 final class ProductRepository extends AbstractRepository implements ProductRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
@@ -18,9 +22,15 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
 
     public function findOneBySlug(string $slug): ?Product
     {
-        return $this->findOneBy(['slug' => $slug]);
+        /** @var Product|null $product */
+        $product = $this->findOneBy(['slug' => $slug]);
+
+        return $product;
     }
 
+    /**
+     * @return list<Product>
+     */
     public function searchProducts(?string $term, ?string $categorySlug, int $page = 1, int $limit = 20): array
     {
         $qb = $this->createQueryBuilder('product')
@@ -29,7 +39,7 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
             ->orderBy('product.id', 'DESC');
 
         if ($term !== null && $term !== '') {
-            $normalized = '%' . mb_strtolower($term) . '%';
+            $normalized = '%'.mb_strtolower($term).'%';
             $qb->andWhere('LOWER(product.name) LIKE :term OR LOWER(COALESCE(product.description, \'\')) LIKE :term OR LOWER(COALESCE(product.shortDescription, \'\')) LIKE :term')
                 ->setParameter('term', $normalized);
         }
@@ -42,6 +52,7 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
 
         $this->applyPagination($qb, $page, $limit);
 
+        /** @var list<Product> $products */
         $products = $qb->getQuery()->getResult();
 
         // Intentional N+1: accessing category details per product triggers extra queries in Phase 1
@@ -60,7 +71,7 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
             ->setParameter('active', true);
 
         if ($term !== null && $term !== '') {
-            $normalized = '%' . mb_strtolower($term) . '%';
+            $normalized = '%'.mb_strtolower($term).'%';
             $qb->andWhere('LOWER(product.name) LIKE :term OR LOWER(COALESCE(product.description, \'\')) LIKE :term OR LOWER(COALESCE(product.shortDescription, \'\')) LIKE :term')
                 ->setParameter('term', $normalized);
         }
@@ -74,6 +85,9 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
+    /**
+     * @return list<Product>
+     */
     public function findFeaturedProducts(int $limit = 8): array
     {
         $qb = $this->createQueryBuilder('product')
@@ -84,6 +98,7 @@ final class ProductRepository extends AbstractRepository implements ProductRepos
             ->orderBy('product.id', 'DESC')
             ->setMaxResults(max(1, $limit));
 
+        /** @var list<Product> $products */
         $products = $qb->getQuery()->getResult();
 
         // Intentional N+1: keep phase-one eager loading story consistent

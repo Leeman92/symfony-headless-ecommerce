@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Api;
 
 use App\Domain\Entity\Category;
-use App\Domain\Entity\Order;
 use App\Domain\Entity\Product;
 use App\Domain\Entity\User;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
+use JsonException;
 use Symfony\Component\HttpFoundation\Response;
+
+use function sprintf;
+
+use const JSON_THROW_ON_ERROR;
 
 final class PaymentControllerTest extends ApiTestCase
 {
@@ -43,8 +47,9 @@ final class PaymentControllerTest extends ApiTestCase
         $response = $this->jsonRequest('POST', sprintf('/api/payments/orders/%s/intent', $orderNumber), []);
         self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
 
-        $this->client->request('POST', sprintf('/api/payments/orders/%s/intent?guest_email=%s', $orderNumber, urlencode('guest-pay@example.com')));
-        $response = $this->client->getResponse();
+        $this->client?->request('POST', sprintf('/api/payments/orders/%s/intent?guest_email=%s', $orderNumber, urlencode('guest-pay@example.com')));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
         $body = $this->decodeResponse($response);
 
         self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
@@ -82,8 +87,9 @@ final class PaymentControllerTest extends ApiTestCase
         $createResponse = $this->jsonRequest('POST', sprintf('/api/payments/orders/%s/intent', $orderNumber), []);
         $paymentIntentId = $this->decodeResponse($createResponse)['data']['payment']['stripe_payment_intent_id'];
 
-        $this->client->request('GET', sprintf('/api/payments/%s', $paymentIntentId));
-        $response = $this->client->getResponse();
+        $this->client?->request('GET', sprintf('/api/payments/%s', $paymentIntentId));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
         $body = $this->decodeResponse($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -93,8 +99,11 @@ final class PaymentControllerTest extends ApiTestCase
     public function testWebhookUpdatesPayment(): void
     {
         $orderNumber = $this->createGuestOrder('webhook@example.com', 'Laptop', 'laptop', 1299.99);
-        $this->client->request('POST', sprintf('/api/payments/orders/%s/intent?guest_email=%s', $orderNumber, urlencode('webhook@example.com')));
-        $intentId = $this->decodeResponse($this->client->getResponse())['data']['payment']['stripe_payment_intent_id'];
+        $this->client?->request('POST', sprintf('/api/payments/orders/%s/intent?guest_email=%s', $orderNumber, urlencode('webhook@example.com')));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
+        $decoded = $this->decodeResponse($response);
+        $intentId = $decoded['data']['payment']['stripe_payment_intent_id'];
 
         $payload = [
             'id' => 'evt_test_webhook',
@@ -122,16 +131,17 @@ final class PaymentControllerTest extends ApiTestCase
 
         $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
         $timestamp = time();
-        $signedPayload = $timestamp . '.' . $jsonPayload;
+        $signedPayload = $timestamp.'.'.$jsonPayload;
         $signature = hash_hmac('sha256', $signedPayload, 'whsec_test');
         $header = sprintf('t=%d,v1=%s', $timestamp, $signature);
 
-        $this->client->request('POST', '/api/payments/webhook', server: [
+        $this->client?->request('POST', '/api/payments/webhook', server: [
             'HTTP_STRIPE_SIGNATURE' => $header,
             'CONTENT_TYPE' => 'application/json',
         ], content: $jsonPayload);
 
-        $response = $this->client->getResponse();
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
 
         $body = $this->decodeResponse($response);
@@ -141,22 +151,22 @@ final class PaymentControllerTest extends ApiTestCase
     private function createCategory(string $name, string $slug): Category
     {
         $category = new Category($name, new Slug($slug));
-        $this->entityManager->persist($category);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($category);
+        $this->entityManager?->flush();
 
         return $category;
     }
 
     private function createProduct(string $name, string $slug, float $price, int $stock): Product
     {
-        $category = $this->createCategory(ucfirst($slug) . ' Category', $slug . '-category');
+        $category = $this->createCategory(ucfirst($slug).' Category', $slug.'-category');
         $product = new Product($name, new Slug($slug), Money::fromFloat($price), $category);
         $product->setStock($stock);
         $product->setSku(ProductSku::fromProductName($name));
         $product->setShortDescription('Short description');
-        $this->entityManager->persist($product);
-        $this->entityManager->flush();
-        $this->entityManager->refresh($product);
+        $this->entityManager?->persist($product);
+        $this->entityManager?->flush();
+        $this->entityManager?->refresh($product);
 
         return $product;
     }
@@ -164,8 +174,8 @@ final class PaymentControllerTest extends ApiTestCase
     private function createUser(string $email): User
     {
         $user = new User($email, 'Test', 'User', 'password');
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($user);
+        $this->entityManager?->flush();
 
         return $user;
     }
@@ -226,8 +236,8 @@ final class PaymentControllerTest extends ApiTestCase
 
         try {
             $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $exception) {
-            self::fail('Invalid JSON response: ' . $exception->getMessage());
+        } catch (JsonException $exception) {
+            self::fail('Invalid JSON response: '.$exception->getMessage());
         }
 
         self::assertIsArray($data);

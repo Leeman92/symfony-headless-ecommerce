@@ -20,9 +20,9 @@ final class AddressTest extends TestCase
             'New York',
             'NY',
             '10001',
-            'US'
+            'US',
         );
-        
+
         self::assertSame('123 Main St', $address->getStreet());
         self::assertSame('New York', $address->getCity());
         self::assertSame('NY', $address->getState());
@@ -39,9 +39,9 @@ final class AddressTest extends TestCase
             'postal_code' => '90210',
             'country' => 'US',
         ];
-        
+
         $address = Address::fromArray($data);
-        
+
         self::assertSame('456 Oak Ave', $address->getStreet());
         self::assertSame('Los Angeles', $address->getCity());
         self::assertSame('CA', $address->getState());
@@ -56,9 +56,9 @@ final class AddressTest extends TestCase
             'New York',
             'NY',
             '10001',
-            'US'
+            'US',
         );
-        
+
         $expected = [
             'street' => '123 Main St',
             'city' => 'New York',
@@ -66,7 +66,7 @@ final class AddressTest extends TestCase
             'postal_code' => '10001',
             'country' => 'US',
         ];
-        
+
         self::assertSame($expected, $address->toArray());
     }
 
@@ -77,9 +77,9 @@ final class AddressTest extends TestCase
             'New York',
             'NY',
             '10001',
-            'US'
+            'US',
         );
-        
+
         $expected = '123 Main St, New York, NY 10001, US';
         self::assertSame($expected, $address->getFormattedAddress());
         self::assertSame($expected, (string) $address);
@@ -92,9 +92,9 @@ final class AddressTest extends TestCase
             'New York',
             'NY',
             '10001',
-            'US'
+            'US',
         );
-        
+
         self::assertTrue($address->isInCountry('US'));
         self::assertTrue($address->isInCountry('us')); // Case insensitive
         self::assertFalse($address->isInCountry('CA'));
@@ -105,7 +105,7 @@ final class AddressTest extends TestCase
         $address1 = new Address('123 Main St', 'New York', 'NY', '10001', 'US');
         $address2 = new Address('123 Main St', 'New York', 'NY', '10001', 'US');
         $address3 = new Address('456 Oak Ave', 'Los Angeles', 'CA', '90210', 'US');
-        
+
         self::assertTrue($address1->equals($address2));
         self::assertFalse($address1->equals($address3));
     }
@@ -114,7 +114,7 @@ final class AddressTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Street address cannot be empty');
-        
+
         new Address('', 'New York', 'NY', '10001', 'US');
     }
 
@@ -122,7 +122,7 @@ final class AddressTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('City cannot be empty');
-        
+
         new Address('123 Main St', '', 'NY', '10001', 'US');
     }
 
@@ -130,7 +130,7 @@ final class AddressTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Country must be a 2-letter ISO code');
-        
+
         new Address('123 Main St', 'New York', 'NY', '10001', 'USA');
     }
 
@@ -138,7 +138,7 @@ final class AddressTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Street address cannot be longer than 255 characters');
-        
+
         $longStreet = str_repeat('a', 256);
         new Address($longStreet, 'New York', 'NY', '10001', 'US');
     }

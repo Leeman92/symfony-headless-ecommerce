@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Entity;
 
-use App\Domain\Entity\EntityInterface;
 use App\Domain\Entity\IdentifiableInterface;
 use App\Domain\Entity\IdentifiableTrait;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +23,7 @@ final class IdentifiableTraitTest extends TestCase
     public function testGetIdentifierReturnsId(): void
     {
         $this->entity->setId(123);
-        
+
         self::assertSame(123, $this->entity->getIdentifier());
     }
 
@@ -41,7 +40,7 @@ final class IdentifiableTraitTest extends TestCase
     public function testHasIdentifierReturnsTrueForEntityWithId(): void
     {
         $this->entity->setId(123);
-        
+
         self::assertTrue($this->entity->hasIdentifier());
     }
 }

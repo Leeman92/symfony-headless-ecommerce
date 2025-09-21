@@ -17,15 +17,20 @@ use App\Infrastructure\Doctrine\Type\MoneyType;
 use App\Infrastructure\Doctrine\Type\OrderNumberType;
 use App\Infrastructure\Doctrine\Type\PhoneType;
 use App\Infrastructure\Repository\OrderRepository;
+use DateTime;
+use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use InvalidArgumentException;
 use Symfony\Component\Validator\Constraints as Assert;
+
+use function in_array;
 
 /**
  * Order entity supporting both user and guest checkout
- * 
+ *
  * Represents e-commerce orders with support for both authenticated users
  * and guest customers. Guest information is stored directly in the order.
  */
@@ -97,6 +102,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     #[ORM\Column(type: AddressType::NAME, nullable: true)]
     private ?Address $shippingAddress = null;
 
+    /** @var array<string, mixed>|null */
     #[ORM\Column(type: JsonbType::NAME, nullable: true)]
     private ?array $metadata = null;
 
@@ -104,14 +110,15 @@ final class Order extends BaseEntity implements ValidatableInterface
     private ?string $notes = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $confirmedAt = null;
+    private ?DateTimeInterface $confirmedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $shippedAt = null;
+    private ?DateTimeInterface $shippedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $deliveredAt = null;
+    private ?DateTimeInterface $deliveredAt = null;
 
+    /** @var Collection<int, OrderItem> */
     #[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderItem::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $items;
 
@@ -137,6 +144,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setOrderNumber(OrderNumber $orderNumber): static
     {
         $this->orderNumber = $orderNumber;
+
         return $this;
     }
 
@@ -148,6 +156,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setCustomer(?User $customer): static
     {
         $this->customer = $customer;
+
         return $this;
     }
 
@@ -169,6 +178,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setGuestEmail(?Email $guestEmail): static
     {
         $this->guestEmail = $guestEmail;
+
         return $this;
     }
 
@@ -180,6 +190,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setGuestName(?PersonName $guestName): static
     {
         $this->guestName = $guestName;
+
         return $this;
     }
 
@@ -192,14 +203,15 @@ final class Order extends BaseEntity implements ValidatableInterface
     {
         if ($guestFirstName === null) {
             $this->guestName = null;
+
             return $this;
         }
-        
+
         $lastName = $this->guestName?->getLastName() ?? '';
         if ($lastName !== '') {
             $this->guestName = new PersonName($guestFirstName, $lastName);
         }
-        
+
         return $this;
     }
 
@@ -212,14 +224,15 @@ final class Order extends BaseEntity implements ValidatableInterface
     {
         if ($guestLastName === null) {
             $this->guestName = null;
+
             return $this;
         }
-        
+
         $firstName = $this->guestName?->getFirstName() ?? '';
         if ($firstName !== '') {
             $this->guestName = new PersonName($firstName, $guestLastName);
         }
-        
+
         return $this;
     }
 
@@ -232,10 +245,12 @@ final class Order extends BaseEntity implements ValidatableInterface
     {
         if ($firstName === null || $lastName === null) {
             $this->guestName = null;
+
             return $this;
         }
-        
+
         $this->guestName = new PersonName($firstName, $lastName);
+
         return $this;
     }
 
@@ -247,6 +262,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setGuestPhone(?Phone $guestPhone): static
     {
         $this->guestPhone = $guestPhone;
+
         return $this;
     }
 
@@ -288,6 +304,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setSubtotal(Money $subtotal): static
     {
         $this->subtotal = $subtotal;
+
         return $this;
     }
 
@@ -304,6 +321,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setTaxAmount(Money $taxAmount): static
     {
         $this->taxAmount = $taxAmount;
+
         return $this;
     }
 
@@ -320,6 +338,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setShippingAmount(Money $shippingAmount): static
     {
         $this->shippingAmount = $shippingAmount;
+
         return $this;
     }
 
@@ -336,6 +355,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setDiscountAmount(Money $discountAmount): static
     {
         $this->discountAmount = $discountAmount;
+
         return $this;
     }
 
@@ -352,6 +372,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setTotal(Money $total): static
     {
         $this->total = $total;
+
         return $this;
     }
 
@@ -366,7 +387,7 @@ final class Order extends BaseEntity implements ValidatableInterface
             ->add($this->taxAmount)
             ->add($this->shippingAmount)
             ->subtract($this->discountAmount);
-        
+
         return $this;
     }
 
@@ -378,19 +399,19 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setStatus(string $status): static
     {
         if (!in_array($status, self::VALID_STATUSES, true)) {
-            throw new \InvalidArgumentException("Invalid order status: {$status}");
+            throw new InvalidArgumentException("Invalid order status: {$status}");
         }
-        
+
         $this->status = $status;
-        
+
         // Update timestamps based on status
         match ($status) {
-            self::STATUS_CONFIRMED => $this->confirmedAt ??= new \DateTime(),
-            self::STATUS_SHIPPED => $this->shippedAt ??= new \DateTime(),
-            self::STATUS_DELIVERED => $this->deliveredAt ??= new \DateTime(),
+            self::STATUS_CONFIRMED => $this->confirmedAt ??= new DateTime(),
+            self::STATUS_SHIPPED => $this->shippedAt ??= new DateTime(),
+            self::STATUS_DELIVERED => $this->deliveredAt ??= new DateTime(),
             default => null,
         };
-        
+
         return $this;
     }
 
@@ -447,14 +468,14 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setCurrency(string $currency): static
     {
         $currency = strtoupper($currency);
-        
+
         // Update all Money objects to use the new currency
         $this->subtotal = new Money($this->subtotal->getAmount(), $currency);
         $this->taxAmount = new Money($this->taxAmount->getAmount(), $currency);
         $this->shippingAmount = new Money($this->shippingAmount->getAmount(), $currency);
         $this->discountAmount = new Money($this->discountAmount->getAmount(), $currency);
         $this->total = new Money($this->total->getAmount(), $currency);
-        
+
         return $this;
     }
 
@@ -466,6 +487,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setBillingAddress(?Address $billingAddress): static
     {
         $this->billingAddress = $billingAddress;
+
         return $this;
     }
 
@@ -477,17 +499,25 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setShippingAddress(?Address $shippingAddress): static
     {
         $this->shippingAddress = $shippingAddress;
+
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getMetadata(): ?array
     {
         return $this->metadata;
     }
 
+    /**
+     * @param array<string, mixed>|null $metadata
+     */
     public function setMetadata(?array $metadata): static
     {
         $this->metadata = $metadata;
+
         return $this;
     }
 
@@ -502,6 +532,7 @@ final class Order extends BaseEntity implements ValidatableInterface
             $this->metadata = [];
         }
         $this->metadata[$key] = $value;
+
         return $this;
     }
 
@@ -513,39 +544,43 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setNotes(?string $notes): static
     {
         $this->notes = $notes;
+
         return $this;
     }
 
-    public function getConfirmedAt(): ?\DateTimeInterface
+    public function getConfirmedAt(): ?DateTimeInterface
     {
         return $this->confirmedAt;
     }
 
-    public function setConfirmedAt(?\DateTimeInterface $confirmedAt): static
+    public function setConfirmedAt(?DateTimeInterface $confirmedAt): static
     {
         $this->confirmedAt = $confirmedAt;
+
         return $this;
     }
 
-    public function getShippedAt(): ?\DateTimeInterface
+    public function getShippedAt(): ?DateTimeInterface
     {
         return $this->shippedAt;
     }
 
-    public function setShippedAt(?\DateTimeInterface $shippedAt): static
+    public function setShippedAt(?DateTimeInterface $shippedAt): static
     {
         $this->shippedAt = $shippedAt;
+
         return $this;
     }
 
-    public function getDeliveredAt(): ?\DateTimeInterface
+    public function getDeliveredAt(): ?DateTimeInterface
     {
         return $this->deliveredAt;
     }
 
-    public function setDeliveredAt(?\DateTimeInterface $deliveredAt): static
+    public function setDeliveredAt(?DateTimeInterface $deliveredAt): static
     {
         $this->deliveredAt = $deliveredAt;
+
         return $this;
     }
 
@@ -563,6 +598,7 @@ final class Order extends BaseEntity implements ValidatableInterface
             $this->items->add($item);
             $item->setOrder($this);
         }
+
         return $this;
     }
 
@@ -573,6 +609,7 @@ final class Order extends BaseEntity implements ValidatableInterface
                 $item->setOrder(null);
             }
         }
+
         return $this;
     }
 
@@ -587,6 +624,7 @@ final class Order extends BaseEntity implements ValidatableInterface
         foreach ($this->items as $item) {
             $total += $item->getQuantity();
         }
+
         return $total;
     }
 
@@ -598,12 +636,12 @@ final class Order extends BaseEntity implements ValidatableInterface
     public function setPayment(?Payment $payment): static
     {
         $this->payment = $payment;
-        
+
         // Set the owning side of the relation if necessary
         if ($payment !== null && $payment->getOrder() !== $this) {
             $payment->setOrder($this);
         }
-        
+
         return $this;
     }
 

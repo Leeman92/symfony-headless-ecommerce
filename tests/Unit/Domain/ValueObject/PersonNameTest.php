@@ -16,7 +16,7 @@ final class PersonNameTest extends TestCase
     public function testValidNameCreation(): void
     {
         $name = new PersonName('John', 'Doe');
-        
+
         self::assertSame('John', $name->getFirstName());
         self::assertSame('Doe', $name->getLastName());
         self::assertSame('John Doe', $name->getFullName());
@@ -26,7 +26,7 @@ final class PersonNameTest extends TestCase
     public function testNameTrimming(): void
     {
         $name = new PersonName('  John  ', '  Doe  ');
-        
+
         self::assertSame('John', $name->getFirstName());
         self::assertSame('Doe', $name->getLastName());
     }
@@ -34,14 +34,14 @@ final class PersonNameTest extends TestCase
     public function testGetInitials(): void
     {
         $name = new PersonName('John', 'Doe');
-        
+
         self::assertSame('JD', $name->getInitials());
     }
 
     public function testGetInitialsWithLowercase(): void
     {
         $name = new PersonName('john', 'doe');
-        
+
         self::assertSame('JD', $name->getInitials());
     }
 
@@ -50,7 +50,7 @@ final class PersonNameTest extends TestCase
         $name1 = new PersonName('John', 'Doe');
         $name2 = new PersonName('John', 'Doe');
         $name3 = new PersonName('Jane', 'Doe');
-        
+
         self::assertTrue($name1->equals($name2));
         self::assertFalse($name1->equals($name3));
     }
@@ -59,7 +59,7 @@ final class PersonNameTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('First name cannot be empty');
-        
+
         new PersonName('', 'Doe');
     }
 
@@ -67,7 +67,7 @@ final class PersonNameTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Last name cannot be empty');
-        
+
         new PersonName('John', '');
     }
 
@@ -75,7 +75,7 @@ final class PersonNameTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('First name must be between 2 and 100 characters');
-        
+
         new PersonName('J', 'Doe');
     }
 
@@ -83,7 +83,7 @@ final class PersonNameTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('First name must be between 2 and 100 characters');
-        
+
         new PersonName(str_repeat('a', 101), 'Doe');
     }
 
@@ -91,7 +91,7 @@ final class PersonNameTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Last name must be between 2 and 100 characters');
-        
+
         new PersonName('John', 'D');
     }
 
@@ -99,7 +99,7 @@ final class PersonNameTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Last name must be between 2 and 100 characters');
-        
+
         new PersonName('John', str_repeat('a', 101));
     }
 }

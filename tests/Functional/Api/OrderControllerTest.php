@@ -11,7 +11,12 @@ use App\Domain\Entity\User;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
+use JsonException;
 use Symfony\Component\HttpFoundation\Response;
+
+use function sprintf;
+
+use const JSON_THROW_ON_ERROR;
 
 final class OrderControllerTest extends ApiTestCase
 {
@@ -95,8 +100,9 @@ final class OrderControllerTest extends ApiTestCase
         $orderResponse = $this->jsonRequest('POST', '/api/orders', $payload);
         self::assertSame(Response::HTTP_CREATED, $orderResponse->getStatusCode());
 
-        $this->client->request('GET', '/api/orders');
-        $response = $this->client->getResponse();
+        $this->client?->request('GET', '/api/orders');
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
         $body = $this->decodeResponse($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -129,8 +135,9 @@ final class OrderControllerTest extends ApiTestCase
         $token = $this->createTokenForUser($user);
         $this->authorize($token);
 
-        $response = $this->client->request('POST', sprintf('/api/orders/%s/convert', $orderNumber));
-        $response = $this->client->getResponse();
+        $response = $this->client?->request('POST', sprintf('/api/orders/%s/convert', $orderNumber));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
         $body = $this->decodeResponse($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -189,8 +196,9 @@ final class OrderControllerTest extends ApiTestCase
         self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
         $orderNumber = $this->decodeResponse($response)['data']['order_number'];
 
-        $this->client->request('GET', sprintf('/api/orders/%s', $orderNumber));
-        $response = $this->client->getResponse();
+        $this->client?->request('GET', sprintf('/api/orders/%s', $orderNumber));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
 
         self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
     }
@@ -215,8 +223,9 @@ final class OrderControllerTest extends ApiTestCase
         self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
         $orderNumber = $this->decodeResponse($response)['data']['order_number'];
 
-        $this->client->request('GET', sprintf('/api/orders/%s?guest_email=%s', $orderNumber, urlencode('keyboard@example.com')));
-        $response = $this->client->getResponse();
+        $this->client?->request('GET', sprintf('/api/orders/%s?guest_email=%s', $orderNumber, urlencode('keyboard@example.com')));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
         $body = $this->decodeResponse($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -226,24 +235,24 @@ final class OrderControllerTest extends ApiTestCase
     private function createCategory(string $name, string $slug): Category
     {
         $category = new Category($name, new Slug($slug));
-        $this->entityManager->persist($category);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($category);
+        $this->entityManager?->flush();
 
         return $category;
     }
 
     private function createProduct(string $name, string $slug, float $price, int $stock): Product
     {
-        $categorySlug = $slug . '-category';
+        $categorySlug = $slug.'-category';
         $category = $this->createCategory(ucfirst($categorySlug), $categorySlug);
 
         $product = new Product($name, new Slug($slug), Money::fromFloat($price), $category);
         $product->setStock($stock);
         $product->setSku(ProductSku::fromProductName($name));
         $product->setShortDescription('Short description');
-        $this->entityManager->persist($product);
-        $this->entityManager->flush();
-        $this->entityManager->refresh($product);
+        $this->entityManager?->persist($product);
+        $this->entityManager?->flush();
+        $this->entityManager?->refresh($product);
 
         return $product;
     }
@@ -254,8 +263,8 @@ final class OrderControllerTest extends ApiTestCase
         if ($admin) {
             $user->setRoles(['ROLE_ADMIN']);
         }
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($user);
+        $this->entityManager?->flush();
 
         return $user;
     }
@@ -277,8 +286,8 @@ final class OrderControllerTest extends ApiTestCase
 
         try {
             $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $exception) {
-            self::fail('Invalid JSON response: ' . $exception->getMessage());
+        } catch (JsonException $exception) {
+            self::fail('Invalid JSON response: '.$exception->getMessage());
         }
 
         self::assertIsArray($data);

@@ -18,6 +18,7 @@ use App\Domain\ValueObject\Slug;
 use InvalidArgumentException;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 
 final class ProductServiceTest extends TestCase
 {
@@ -256,7 +257,7 @@ final class ProductServiceTest extends TestCase
     {
         $product = $this->createProduct();
 
-        $reflection = new \ReflectionProperty(Product::class, 'id');
+        $reflection = new ReflectionProperty(Product::class, 'id');
         $reflection->setAccessible(true);
         $reflection->setValue($product, 1);
 

@@ -8,6 +8,8 @@ use App\Domain\Entity\Order;
 use App\Domain\Entity\Payment;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\OrderNumber;
+use DateTime;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,7 +25,7 @@ final class PaymentTest extends TestCase
         $orderNumber = new OrderNumber('ORD-2024-001');
         $this->order = new Order($orderNumber);
         $this->order->setTotal(new Money('100.00', 'USD'));
-        
+
         $amount = new Money('100.00', 'USD');
         $this->payment = new Payment($this->order, 'pi_test123456789', $amount);
     }
@@ -66,28 +68,28 @@ final class PaymentTest extends TestCase
 
     public function testInvalidPaymentStatus(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid payment status: invalid_status');
-        
+
         $this->payment->setStatus('invalid_status');
     }
 
     public function testPaymentMethodHandling(): void
     {
         self::assertNull($this->payment->getPaymentMethod());
-        
+
         $this->payment->setPaymentMethod(Payment::METHOD_CARD);
         self::assertSame(Payment::METHOD_CARD, $this->payment->getPaymentMethod());
-        
+
         $this->payment->setPaymentMethod(Payment::METHOD_BANK_TRANSFER);
         self::assertSame(Payment::METHOD_BANK_TRANSFER, $this->payment->getPaymentMethod());
     }
 
     public function testInvalidPaymentMethod(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid payment method: invalid_method');
-        
+
         $this->payment->setPaymentMethod('invalid_method');
     }
 
@@ -95,7 +97,7 @@ final class PaymentTest extends TestCase
     {
         $this->payment->setCurrency('eur');
         self::assertSame('EUR', $this->payment->getCurrency());
-        
+
         $this->payment->setCurrency('GBP');
         self::assertSame('GBP', $this->payment->getCurrency());
     }
@@ -125,7 +127,7 @@ final class PaymentTest extends TestCase
                 'exp_year' => 2025,
             ],
         ];
-        
+
         $this->payment->setPaymentMethodDetails($details);
         self::assertSame($details, $this->payment->getPaymentMethodDetails());
     }
@@ -142,7 +144,7 @@ final class PaymentTest extends TestCase
     public function testMarkAsSucceeded(): void
     {
         $paymentMethodDetails = ['type' => 'card', 'card' => ['last4' => '4242']];
-        
+
         $this->payment->markAsSucceeded('pm_test123', $paymentMethodDetails);
 
         self::assertTrue($this->payment->isSucceeded());
@@ -165,7 +167,7 @@ final class PaymentTest extends TestCase
     {
         // Mark payment as succeeded first
         $this->payment->setStatus(Payment::STATUS_SUCCEEDED);
-        
+
         self::assertSame(0.0, $this->payment->getRefundedAmountAsFloat());
         self::assertSame(100.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertFalse($this->payment->isFullyRefunded());
@@ -174,7 +176,7 @@ final class PaymentTest extends TestCase
 
         // Add partial refund
         $this->payment->addRefund('30.00');
-        
+
         self::assertSame('30.00', $this->payment->getRefundedAmount()->getAmount());
         self::assertSame(30.0, $this->payment->getRefundedAmountAsFloat());
         self::assertSame(70.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
@@ -185,7 +187,7 @@ final class PaymentTest extends TestCase
 
         // Add full refund
         $this->payment->addRefund('70.00');
-        
+
         self::assertSame('100.00', $this->payment->getRefundedAmount()->getAmount());
         self::assertSame(0.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertTrue($this->payment->isFullyRefunded());
@@ -196,20 +198,20 @@ final class PaymentTest extends TestCase
 
     public function testRefundExceedsAmount(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Refund amount exceeds payment amount');
-        
+
         $this->payment->addRefund('150.00');
     }
 
     public function testRefundAccumulation(): void
     {
         $this->payment->setStatus(Payment::STATUS_SUCCEEDED);
-        
+
         $this->payment->addRefund('25.00');
         $this->payment->addRefund('25.00');
         $this->payment->addRefund('25.00');
-        
+
         self::assertSame('75.00', $this->payment->getRefundedAmount()->getAmount());
         self::assertSame(25.0, $this->payment->getRemainingAmount()->getAmountAsFloat());
         self::assertTrue($this->payment->isPartiallyRefunded());
@@ -219,15 +221,15 @@ final class PaymentTest extends TestCase
     {
         // Pending payment cannot be refunded
         self::assertFalse($this->payment->canBeRefunded());
-        
+
         // Failed payment cannot be refunded
         $this->payment->setStatus(Payment::STATUS_FAILED);
         self::assertFalse($this->payment->canBeRefunded());
-        
+
         // Succeeded payment can be refunded
         $this->payment->setStatus(Payment::STATUS_SUCCEEDED);
         self::assertTrue($this->payment->canBeRefunded());
-        
+
         // Fully refunded payment cannot be refunded further
         $this->payment->addRefund('100.00');
         self::assertFalse($this->payment->canBeRefunded());
@@ -243,7 +245,7 @@ final class PaymentTest extends TestCase
     public function testPaymentToString(): void
     {
         self::assertSame('Payment pi_test123456789 - $100.00', (string) $this->payment);
-        
+
         $this->payment->setCurrency('EUR');
         self::assertSame('Payment pi_test123456789 - €100.00', (string) $this->payment);
     }
@@ -251,7 +253,7 @@ final class PaymentTest extends TestCase
     public function testStripeCustomerIdHandling(): void
     {
         self::assertNull($this->payment->getStripeCustomerId());
-        
+
         $this->payment->setStripeCustomerId('cus_test123');
         self::assertSame('cus_test123', $this->payment->getStripeCustomerId());
     }
@@ -259,16 +261,16 @@ final class PaymentTest extends TestCase
     public function testTimestampHandling(): void
     {
         // Test that timestamps are set automatically when status changes
-        $beforeSucceeded = new \DateTime();
+        $beforeSucceeded = new DateTime();
         $this->payment->setStatus(Payment::STATUS_SUCCEEDED);
-        $afterSucceeded = new \DateTime();
-        
+        $afterSucceeded = new DateTime();
+
         self::assertNotNull($this->payment->getPaidAt());
         self::assertGreaterThanOrEqual($beforeSucceeded, $this->payment->getPaidAt());
         self::assertLessThanOrEqual($afterSucceeded, $this->payment->getPaidAt());
-        
+
         // Test manual timestamp setting
-        $customDate = new \DateTime('2024-01-01 12:00:00');
+        $customDate = new DateTime('2024-01-01 12:00:00');
         $this->payment->setPaidAt($customDate);
         self::assertSame($customDate, $this->payment->getPaidAt());
     }

@@ -17,18 +17,22 @@ use App\Infrastructure\Controller\Transformer\OrderTransformer;
 use App\Infrastructure\Controller\Transformer\PaymentTransformer;
 use InvalidArgumentException;
 use JsonException;
-use Stripe\Event;
-use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
+use Stripe\Webhook;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use UnexpectedValueException;
+
 use function is_array;
 use function is_string;
+use function sprintf;
 use function strcasecmp;
+
+use const JSON_THROW_ON_ERROR;
 
 #[Route('/payments', name: 'api_payments_')]
 final class PaymentController extends AbstractController
@@ -41,7 +45,10 @@ final class PaymentController extends AbstractController
         private readonly OrderRepositoryInterface $orderRepository,
         ParameterBagInterface $parameterBag,
     ) {
-        $this->stripeWebhookSecret = (string) $parameterBag->get('stripe_webhook_secret');
+        $this->stripeWebhookSecret = $parameterBag->get('stripe_webhook_secret');
+        if ($this->stripeWebhookSecret === '') {
+            throw new InvalidArgumentException('Stripe webhook secret must be configured as a non-empty string');
+        }
     }
 
     #[Route('/orders/{orderNumber}/intent', name: 'create_intent', methods: ['POST'])]
@@ -133,9 +140,9 @@ final class PaymentController extends AbstractController
         try {
             $event = Webhook::constructEvent($payload, $signature, $this->stripeWebhookSecret);
         } catch (SignatureVerificationException $exception) {
-            return $this->jsonError('Invalid Stripe signature: ' . $exception->getMessage(), Response::HTTP_BAD_REQUEST);
-        } catch (\UnexpectedValueException $exception) {
-            return $this->jsonError('Invalid Stripe payload: ' . $exception->getMessage(), Response::HTTP_BAD_REQUEST);
+            return $this->jsonError('Invalid Stripe signature: '.$exception->getMessage(), Response::HTTP_BAD_REQUEST);
+        } catch (UnexpectedValueException $exception) {
+            return $this->jsonError('Invalid Stripe payload: '.$exception->getMessage(), Response::HTTP_BAD_REQUEST);
         }
 
         $payment = $this->paymentService->handleWebhookEvent($event);

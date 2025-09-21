@@ -40,7 +40,7 @@ final class PaymentServiceTest extends TestCase
         $this->service = new PaymentService(
             $this->paymentRepository,
             $this->stripeGateway,
-            $this->entityManager
+            $this->entityManager,
         );
     }
 
@@ -67,6 +67,7 @@ final class PaymentServiceTest extends TestCase
                 self::assertSame(10000, $params['amount']);
                 self::assertSame('usd', $params['currency']);
                 self::assertSame('Payment for order ORD-2024-0001', $params['description']);
+
                 return true;
             }))
             ->willReturn($intent);
@@ -80,9 +81,7 @@ final class PaymentServiceTest extends TestCase
 
         $this->entityManager->expects(self::once())
             ->method('wrapInTransaction')
-            ->willReturnCallback(function (callable $operation) {
-                return $operation();
-            });
+            ->willReturnCallback(fn (callable $operation) => $operation());
 
         $payment = $this->service->createPaymentIntent($order);
 
@@ -129,9 +128,7 @@ final class PaymentServiceTest extends TestCase
 
         $this->entityManager->expects(self::once())
             ->method('wrapInTransaction')
-            ->willReturnCallback(function (callable $operation) {
-                return $operation();
-            });
+            ->willReturnCallback(fn (callable $operation) => $operation());
 
         $result = $this->service->confirmPayment('pi_456', 'pm_123');
 

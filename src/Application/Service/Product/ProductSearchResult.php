@@ -5,8 +5,18 @@ declare(strict_types=1);
 namespace App\Application\Service\Product;
 
 use App\Domain\Entity\Product;
+use Countable;
+use IteratorAggregate;
+use Traversable;
 
-final class ProductSearchResult implements \Countable, \IteratorAggregate
+use function ceil;
+use function count;
+use function max;
+
+/**
+ * @implements IteratorAggregate<int, Product>
+ */
+final class ProductSearchResult implements Countable, IteratorAggregate
 {
     /**
      * @param list<Product> $products
@@ -15,7 +25,7 @@ final class ProductSearchResult implements \Countable, \IteratorAggregate
         private array $products,
         private int $total,
         private int $page,
-        private int $limit
+        private int $limit,
     ) {
         $this->page = max(1, $page);
         $this->limit = max(1, $limit);
@@ -47,7 +57,7 @@ final class ProductSearchResult implements \Countable, \IteratorAggregate
 
     public function totalPages(): int
     {
-        return (int) max(1, (int) ceil($this->total / $this->limit));
+        return max(1, (int) ceil($this->total / $this->limit));
     }
 
     public function hasNextPage(): bool
@@ -65,7 +75,7 @@ final class ProductSearchResult implements \Countable, \IteratorAggregate
         return count($this->products);
     }
 
-    public function getIterator(): \Traversable
+    public function getIterator(): Traversable
     {
         yield from $this->products;
     }

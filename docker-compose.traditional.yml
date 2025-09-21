@@ -32,10 +32,8 @@ services:
         GROUP_ID: ${GROUP_ID:-1000}
     container_name: ecommerce-php-traditional
     volumes:
-      # Bind mount source code for development
+      # Bind mount source code (including vendor) for development
       - .:/var/www/html
-      # Use named volume for vendor to persist dependencies
-      - vendor_data:/var/www/html/vendor
     environment:
       - APP_ENV=dev
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ecommerce?serverVersion=16&charset=utf8
@@ -54,9 +52,6 @@ services:
       - testing
     networks:
       - ecommerce-network
-
-volumes:
-  vendor_data:
 
 networks:
   ecommerce-network:

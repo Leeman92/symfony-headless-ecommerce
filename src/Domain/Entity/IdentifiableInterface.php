@@ -6,7 +6,7 @@ namespace App\Domain\Entity;
 
 /**
  * Interface for entities that can be identified by various means
- * 
+ *
  * Extends the basic EntityInterface to provide additional
  * identification methods for complex entity relationships.
  */

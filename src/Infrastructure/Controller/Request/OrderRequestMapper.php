@@ -11,10 +11,20 @@ use App\Domain\ValueObject\Address;
 use App\Domain\ValueObject\Money;
 use InvalidArgumentException;
 
+use function array_key_exists;
+use function is_array;
+use function is_numeric;
+use function is_string;
+use function sprintf;
+use function str_replace;
+use function strtoupper;
+use function trim;
+
 final class OrderRequestMapper
 {
     /**
      * @param array<string, mixed> $payload
+     * @return array{OrderDraft, GuestCustomerData}
      */
     public function createGuestOrderData(array $payload): array
     {
@@ -71,7 +81,7 @@ final class OrderRequestMapper
             $this->parseOptionalAddress($payload['billing_address'] ?? null),
             $this->parseOptionalAddress($payload['shipping_address'] ?? null),
             $this->extractNullableString($payload, 'notes'),
-            $this->extractNullableArray($payload, 'metadata')
+            $this->extractNullableArray($payload, 'metadata'),
         );
     }
 

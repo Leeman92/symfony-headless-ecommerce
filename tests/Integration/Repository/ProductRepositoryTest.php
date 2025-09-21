@@ -10,6 +10,7 @@ use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\Slug;
 use App\Infrastructure\Repository\ProductRepository;
 use App\Tests\Support\Doctrine\DoctrineRepositoryTestCase;
+use http\Exception\RuntimeException;
 
 final class ProductRepositoryTest extends DoctrineRepositoryTestCase
 {
@@ -18,6 +19,10 @@ final class ProductRepositoryTest extends DoctrineRepositoryTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (null === $this->managerRegistry) {
+            throw new RuntimeException('ManagerRegistry cannot be null');
+        }
+
         $this->repository = new ProductRepository($this->managerRegistry);
     }
 
@@ -102,8 +107,8 @@ final class ProductRepositoryTest extends DoctrineRepositoryTestCase
         $category = new Category($name, new Slug($slug));
         $category->setDescription('Test category');
 
-        $this->entityManager->persist($category);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($category);
+        $this->entityManager?->flush();
 
         return $category;
     }
@@ -112,13 +117,13 @@ final class ProductRepositoryTest extends DoctrineRepositoryTestCase
         string $name,
         string $slug,
         Category $category,
-        string $price = '99.99'
+        string $price = '99.99',
     ): Product {
         $product = new Product($name, new Slug($slug), new Money($price), $category);
         $product->setShortDescription('Short description');
 
-        $this->entityManager->persist($product);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($product);
+        $this->entityManager?->flush();
 
         return $product;
     }

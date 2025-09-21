@@ -7,13 +7,18 @@ namespace App\Domain\Entity;
 use App\Domain\Type\JsonbType;
 use App\Domain\ValueObject\Money;
 use App\Infrastructure\Doctrine\Type\MoneyType;
+use DateTime;
+use DateTimeInterface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use InvalidArgumentException;
 use Symfony\Component\Validator\Constraints as Assert;
+
+use function in_array;
 
 /**
  * Payment entity with Stripe integration support
- * 
+ *
  * Handles payment processing for both user and guest orders
  * with comprehensive Stripe integration and status tracking.
  */
@@ -85,9 +90,11 @@ final class Payment extends BaseEntity implements ValidatableInterface
     #[Assert\Choice(choices: self::VALID_METHODS, message: 'Invalid payment method')]
     private ?string $paymentMethod = null;
 
+    /** @var array<string, mixed>|null */
     #[ORM\Column(type: JsonbType::NAME, nullable: true)]
     private ?array $stripeMetadata = null;
 
+    /** @var array<string, mixed>|null */
     #[ORM\Column(type: JsonbType::NAME, nullable: true)]
     private ?array $paymentMethodDetails = null;
 
@@ -99,28 +106,28 @@ final class Payment extends BaseEntity implements ValidatableInterface
     private ?string $failureCode = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $paidAt = null;
+    private ?DateTimeInterface $paidAt = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $failedAt = null;
+    private ?DateTimeInterface $failedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $refundedAt = null;
+    private ?DateTimeInterface $refundedAt = null;
 
     public function __construct(
         Order $order,
         string $stripePaymentIntentId,
-        Money|string $amount
+        Money|string $amount,
     ) {
         $this->order = $order;
         $this->stripePaymentIntentId = $stripePaymentIntentId;
-        
+
         if ($amount instanceof Money) {
             $this->amount = $amount;
         } else {
             $this->amount = new Money($amount, $order->getCurrency());
         }
-        
+
         $this->refundedAmount = Money::zero($this->amount->getCurrency());
     }
 
@@ -132,6 +139,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setOrder(?Order $order): static
     {
         $this->order = $order;
+
         return $this;
     }
 
@@ -143,6 +151,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setStripePaymentIntentId(string $stripePaymentIntentId): static
     {
         $this->stripePaymentIntentId = $stripePaymentIntentId;
+
         return $this;
     }
 
@@ -154,6 +163,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setStripePaymentMethodId(?string $stripePaymentMethodId): static
     {
         $this->stripePaymentMethodId = $stripePaymentMethodId;
+
         return $this;
     }
 
@@ -165,6 +175,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setStripeCustomerId(?string $stripeCustomerId): static
     {
         $this->stripeCustomerId = $stripeCustomerId;
+
         return $this;
     }
 
@@ -180,6 +191,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
         } else {
             $this->amount = new Money($amount, $this->amount->getCurrency());
         }
+
         return $this;
     }
 
@@ -205,6 +217,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
         } else {
             $this->refundedAmount = new Money($refundedAmount, $this->amount->getCurrency());
         }
+
         return $this;
     }
 
@@ -236,11 +249,11 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setCurrency(string $currency): static
     {
         $currency = strtoupper($currency);
-        
+
         // Update Money objects to use new currency
         $this->amount = new Money($this->amount->getAmount(), $currency);
         $this->refundedAmount = new Money($this->refundedAmount->getAmount(), $currency);
-        
+
         return $this;
     }
 
@@ -252,19 +265,19 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setStatus(string $status): static
     {
         if (!in_array($status, self::VALID_STATUSES, true)) {
-            throw new \InvalidArgumentException("Invalid payment status: {$status}");
+            throw new InvalidArgumentException("Invalid payment status: {$status}");
         }
-        
+
         $this->status = $status;
-        
+
         // Update timestamps based on status
         match ($status) {
-            self::STATUS_SUCCEEDED => $this->paidAt ??= new \DateTime(),
-            self::STATUS_FAILED => $this->failedAt ??= new \DateTime(),
-            self::STATUS_REFUNDED, self::STATUS_PARTIALLY_REFUNDED => $this->refundedAt ??= new \DateTime(),
+            self::STATUS_SUCCEEDED => $this->paidAt ??= new DateTime(),
+            self::STATUS_FAILED => $this->failedAt ??= new DateTime(),
+            self::STATUS_REFUNDED, self::STATUS_PARTIALLY_REFUNDED => $this->refundedAt ??= new DateTime(),
             default => null,
         };
-        
+
         return $this;
     }
 
@@ -316,21 +329,29 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setPaymentMethod(?string $paymentMethod): static
     {
         if ($paymentMethod !== null && !in_array($paymentMethod, self::VALID_METHODS, true)) {
-            throw new \InvalidArgumentException("Invalid payment method: {$paymentMethod}");
+            throw new InvalidArgumentException("Invalid payment method: {$paymentMethod}");
         }
-        
+
         $this->paymentMethod = $paymentMethod;
+
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getStripeMetadata(): ?array
     {
         return $this->stripeMetadata;
     }
 
+    /**
+     * @param array<string, mixed>|null $stripeMetadata
+     */
     public function setStripeMetadata(?array $stripeMetadata): static
     {
         $this->stripeMetadata = $stripeMetadata;
+
         return $this;
     }
 
@@ -345,17 +366,25 @@ final class Payment extends BaseEntity implements ValidatableInterface
             $this->stripeMetadata = [];
         }
         $this->stripeMetadata[$key] = $value;
+
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getPaymentMethodDetails(): ?array
     {
         return $this->paymentMethodDetails;
     }
 
+    /**
+     * @param array<string, mixed>|null $paymentMethodDetails
+     */
     public function setPaymentMethodDetails(?array $paymentMethodDetails): static
     {
         $this->paymentMethodDetails = $paymentMethodDetails;
+
         return $this;
     }
 
@@ -367,6 +396,7 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setFailureReason(?string $failureReason): static
     {
         $this->failureReason = $failureReason;
+
         return $this;
     }
 
@@ -378,54 +408,61 @@ final class Payment extends BaseEntity implements ValidatableInterface
     public function setFailureCode(?string $failureCode): static
     {
         $this->failureCode = $failureCode;
+
         return $this;
     }
 
-    public function getPaidAt(): ?\DateTimeInterface
+    public function getPaidAt(): ?DateTimeInterface
     {
         return $this->paidAt;
     }
 
-    public function setPaidAt(?\DateTimeInterface $paidAt): static
+    public function setPaidAt(?DateTimeInterface $paidAt): static
     {
         $this->paidAt = $paidAt;
+
         return $this;
     }
 
-    public function getFailedAt(): ?\DateTimeInterface
+    public function getFailedAt(): ?DateTimeInterface
     {
         return $this->failedAt;
     }
 
-    public function setFailedAt(?\DateTimeInterface $failedAt): static
+    public function setFailedAt(?DateTimeInterface $failedAt): static
     {
         $this->failedAt = $failedAt;
+
         return $this;
     }
 
-    public function getRefundedAt(): ?\DateTimeInterface
+    public function getRefundedAt(): ?DateTimeInterface
     {
         return $this->refundedAt;
     }
 
-    public function setRefundedAt(?\DateTimeInterface $refundedAt): static
+    public function setRefundedAt(?DateTimeInterface $refundedAt): static
     {
         $this->refundedAt = $refundedAt;
+
         return $this;
     }
 
+    /**
+     * @param array<string, mixed>|null $paymentMethodDetails
+     */
     public function markAsSucceeded(?string $paymentMethodId = null, ?array $paymentMethodDetails = null): static
     {
         $this->setStatus(self::STATUS_SUCCEEDED);
-        
+
         if ($paymentMethodId !== null) {
             $this->setStripePaymentMethodId($paymentMethodId);
         }
-        
+
         if ($paymentMethodDetails !== null) {
             $this->setPaymentMethodDetails($paymentMethodDetails);
         }
-        
+
         return $this;
     }
 
@@ -433,33 +470,33 @@ final class Payment extends BaseEntity implements ValidatableInterface
     {
         $this->setStatus(self::STATUS_FAILED);
         $this->setFailureReason($failureReason);
-        
+
         if ($failureCode !== null) {
             $this->setFailureCode($failureCode);
         }
-        
+
         return $this;
     }
 
     public function addRefund(Money|string $refundAmount): static
     {
         $refundMoney = $refundAmount instanceof Money ? $refundAmount : new Money($refundAmount, $this->amount->getCurrency());
-        
+
         $newRefundedAmount = $this->refundedAmount->add($refundMoney);
-        
+
         if ($newRefundedAmount->isGreaterThan($this->amount)) {
-            throw new \InvalidArgumentException('Refund amount exceeds payment amount');
+            throw new InvalidArgumentException('Refund amount exceeds payment amount');
         }
-        
+
         $this->refundedAmount = $newRefundedAmount;
-        
+
         // Update status based on refund amount
         if ($this->refundedAmount->equals($this->amount) || $this->refundedAmount->isGreaterThan($this->amount)) {
             $this->setStatus(self::STATUS_REFUNDED);
         } else {
             $this->setStatus(self::STATUS_PARTIALLY_REFUNDED);
         }
-        
+
         return $this;
     }
 

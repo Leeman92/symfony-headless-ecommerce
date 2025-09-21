@@ -8,6 +8,8 @@ use App\Domain\ValueObject\Address;
 use App\Domain\ValueObject\Money;
 use InvalidArgumentException;
 
+use function is_string;
+
 final class OrderDraft
 {
     /** @var list<OrderItemDraft> */
@@ -27,11 +29,14 @@ final class OrderDraft
 
     private ?string $notes;
 
-    private ?array $metadata;
+    /**
+     * @var array<string, mixed>|null
+     */
+    private ?array $metadata = null;
 
     /**
      * @param list<OrderItemDraft> $items
-     * @param array<string, mixed>|null $metadata
+     * @param array<array-key, mixed>|null $metadata
      */
     public function __construct(
         array $items,
@@ -48,15 +53,14 @@ final class OrderDraft
             throw new InvalidArgumentException('Order must contain at least one item');
         }
 
+        $validatedItems = [];
         foreach ($items as $item) {
-            if (!$item instanceof OrderItemDraft) {
-                throw new InvalidArgumentException('Order items must be instances of OrderItemDraft');
-            }
+            $validatedItems[] = $item;
         }
 
         $normalizedCurrency = $currency !== null ? strtoupper(trim($currency)) : null;
         $this->currency = $normalizedCurrency === '' ? null : $normalizedCurrency;
-        $this->items = array_values($items);
+        $this->items = $validatedItems;
         $this->taxAmount = $taxAmount;
         $this->shippingAmount = $shippingAmount;
         $this->discountAmount = $discountAmount;
@@ -125,7 +129,7 @@ final class OrderDraft
     }
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param array<array-key, mixed> $metadata
      * @return array<string, mixed>
      */
     private function sanitizeMetadata(array $metadata): array

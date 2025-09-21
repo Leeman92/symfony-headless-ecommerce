@@ -6,9 +6,18 @@ namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
 
+use function filter_var;
+use function strlen;
+use function strpos;
+use function strtolower;
+use function substr;
+use function trim;
+
+use const FILTER_VALIDATE_EMAIL;
+
 /**
  * Email value object
- * 
+ *
  * Encapsulates email validation and behavior according to DDD principles.
  * Ensures emails are always in a valid state.
  */
@@ -19,8 +28,8 @@ final readonly class Email
     public function __construct(string $email)
     {
         $email = trim(strtolower($email));
-        
-        if (empty($email)) {
+
+        if ($email === '') {
             throw new InvalidArgumentException('Email cannot be empty');
         }
 
@@ -28,7 +37,7 @@ final readonly class Email
             throw new InvalidArgumentException('Email cannot be longer than 180 characters');
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidArgumentException('Invalid email format');
         }
 
@@ -42,12 +51,16 @@ final readonly class Email
 
     public function getDomain(): string
     {
-        return substr($this->value, strpos($this->value, '@') + 1);
+        $separatorPosition = strpos($this->value, '@');
+
+        return $separatorPosition === false ? '' : substr($this->value, $separatorPosition + 1);
     }
 
     public function getLocalPart(): string
     {
-        return substr($this->value, 0, strpos($this->value, '@'));
+        $separatorPosition = strpos($this->value, '@');
+
+        return $separatorPosition === false ? '' : substr($this->value, 0, $separatorPosition);
     }
 
     public function isGmail(): bool
@@ -55,7 +68,7 @@ final readonly class Email
         return $this->getDomain() === 'gmail.com';
     }
 
-    public function equals(Email $other): bool
+    public function equals(self $other): bool
     {
         return $this->value === $other->value;
     }

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Doctrine\Type;
 use App\Domain\ValueObject\OrderNumber;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\StringType;
+use InvalidArgumentException;
 
 /**
  * Custom Doctrine type for OrderNumber value object
@@ -31,7 +32,7 @@ final class OrderNumberType extends StringType
         }
 
         if (!$value instanceof OrderNumber) {
-            throw new \InvalidArgumentException('Expected OrderNumber value object');
+            throw new InvalidArgumentException('Expected OrderNumber value object');
         }
 
         return $value->getValue();

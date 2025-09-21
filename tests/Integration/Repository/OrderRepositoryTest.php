@@ -14,10 +14,11 @@ use App\Domain\ValueObject\Email;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\OrderNumber;
 use App\Domain\ValueObject\PersonName;
-use App\Domain\ValueObject\Slug;
 use App\Infrastructure\Repository\OrderRepository;
 use App\Tests\Support\Doctrine\DoctrineRepositoryTestCase;
 use DateTimeImmutable;
+use http\Exception\RuntimeException;
+
 use function random_int;
 
 final class OrderRepositoryTest extends DoctrineRepositoryTestCase
@@ -27,6 +28,10 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (null === $this->managerRegistry) {
+            throw new RuntimeException('ManagerRegistry cannot be null');
+        }
+
         $this->repository = new OrderRepository($this->managerRegistry);
     }
 
@@ -47,7 +52,7 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
         $user = $this->createUser('buyer@example.com');
         $order = $this->createOrder('ORD-1001', $user);
 
-        $this->entityManager->flush();
+        $this->entityManager?->flush();
 
         $found = $this->repository->findByOrderNumber(new OrderNumber('ORD-1001'));
 
@@ -61,7 +66,7 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
         $this->createOrder('ORD-1001', $user, new DateTimeImmutable('2024-01-01 10:00:00'));
         $recent = $this->createOrder('ORD-1002', $user, new DateTimeImmutable('2024-01-05 12:00:00'));
 
-        $this->entityManager->flush();
+        $this->entityManager?->flush();
 
         $results = $this->repository->findRecentOrdersForUser($user, 1);
 
@@ -89,7 +94,7 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
         $open = $this->createOrder('ORD-2001', $user);
         $completed = $this->createOrder('ORD-2002', $user);
         $completed->setStatus(Order::STATUS_DELIVERED);
-        $this->entityManager->flush();
+        $this->entityManager?->flush();
 
         $results = $this->repository->findOpenOrders();
 
@@ -102,8 +107,8 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
         $user = new User(new Email($email), new PersonName('Test', 'User'), '', 'hash');
         $user->setRoles(['ROLE_USER']);
 
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        $this->entityManager?->persist($user);
+        $this->entityManager?->flush();
 
         return $user;
     }
@@ -111,7 +116,7 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
     private function createOrder(
         string $orderNumber,
         ?User $user = null,
-        ?DateTimeImmutable $createdAt = null
+        ?DateTimeImmutable $createdAt = null,
     ): Order {
         $order = new Order(new OrderNumber($orderNumber));
 
@@ -131,18 +136,18 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
             $order->setUpdatedAt($createdAt);
         }
 
-        $this->entityManager->persist($order);
+        $this->entityManager?->persist($order);
 
         return $order;
     }
 
     private function createGuestOrder(string $email): Order
     {
-        $order = $this->createOrder('ORD-' . random_int(3000, 3999));
+        $order = $this->createOrder('ORD-'.random_int(3000, 3999));
         $order->setCustomer(null);
         $order->setGuestEmail(new Email($email));
         $order->setGuestName(new PersonName('Guest', 'Customer'));
-        $this->entityManager->flush();
+        $this->entityManager?->flush();
 
         return $order;
     }

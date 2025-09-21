@@ -9,6 +9,7 @@ use App\Domain\ValueObject\Slug;
 use App\Infrastructure\Repository\AbstractRepository;
 use App\Tests\Support\Doctrine\DoctrineRepositoryTestCase;
 use Doctrine\Persistence\ManagerRegistry;
+use http\Exception\RuntimeException;
 
 final class AbstractRepositoryTest extends DoctrineRepositoryTestCase
 {
@@ -17,6 +18,10 @@ final class AbstractRepositoryTest extends DoctrineRepositoryTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (null === $this->managerRegistry) {
+            throw new RuntimeException('Registry needs to be initialized first');
+        }
+
         $this->repository = new CategoryRepositoryStub($this->managerRegistry);
     }
 
@@ -36,6 +41,7 @@ final class AbstractRepositoryTest extends DoctrineRepositoryTestCase
         self::assertNotNull($category->getId());
 
         $reloaded = $this->repository->find($category->getId());
+        self::assertNotNull($reloaded);
         self::assertSame('Electronics', $reloaded->getName());
     }
 
@@ -88,12 +94,18 @@ final class CategoryRepositoryStub extends AbstractRepository
         parent::__construct($registry, Category::class);
     }
 
-    /** @return list<Category> */
+    /**
+     * @param array<string, mixed> $criteria
+     * @return list<Category>
+     */
     public function exposeFindByCriteria(array $criteria): array
     {
         return $this->findByCriteria($criteria);
     }
 
+    /**
+     * @param array<string, mixed> $criteria
+     */
     public function exposeFindOneByCriteria(array $criteria): ?Category
     {
         return $this->findOneByCriteria($criteria);

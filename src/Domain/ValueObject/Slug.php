@@ -6,9 +6,20 @@ namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
 
+use function preg_match;
+use function preg_replace;
+use function rtrim;
+use function str_contains;
+use function str_ends_with;
+use function str_starts_with;
+use function strlen;
+use function strtolower;
+use function substr;
+use function trim;
+
 /**
  * URL slug value object
- * 
+ *
  * Encapsulates slug validation and generation according to DDD principles.
  * Ensures slugs are always URL-safe and SEO-friendly.
  */
@@ -19,8 +30,8 @@ final readonly class Slug
     public function __construct(string $slug)
     {
         $slug = trim(strtolower($slug));
-        
-        if (empty($slug)) {
+
+        if ($slug === '') {
             throw new InvalidArgumentException('Slug cannot be empty');
         }
 
@@ -28,7 +39,7 @@ final readonly class Slug
             throw new InvalidArgumentException('Slug cannot be longer than 220 characters');
         }
 
-        if (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+        if (preg_match('/^[a-z0-9\-]+$/', $slug) !== 1) {
             throw new InvalidArgumentException('Slug can only contain lowercase letters, numbers, and hyphens');
         }
 
@@ -47,26 +58,26 @@ final readonly class Slug
     {
         // Convert text to URL-friendly slug
         $slug = strtolower(trim($text));
-        
+
         // Replace spaces and special characters with hyphens
-        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
-        
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?? '';
+
         // Remove consecutive hyphens
-        $slug = preg_replace('/-+/', '-', $slug);
-        
+        $slug = preg_replace('/-+/', '-', $slug) ?? $slug;
+
         // Remove leading/trailing hyphens
         $slug = trim($slug, '-');
-        
+
         // Truncate if too long
         if (strlen($slug) > 220) {
             $slug = substr($slug, 0, 220);
             $slug = rtrim($slug, '-');
         }
-        
-        if (empty($slug)) {
+
+        if ($slug === '') {
             throw new InvalidArgumentException('Cannot generate slug from provided text');
         }
-        
+
         return new self($slug);
     }
 
@@ -74,11 +85,11 @@ final readonly class Slug
     {
         $baseSlug = self::fromString($text);
         $maxLength = 220 - strlen($suffix) - 1; // -1 for the hyphen
-        
+
         $truncatedSlug = substr($baseSlug->value, 0, $maxLength);
         $truncatedSlug = rtrim($truncatedSlug, '-');
-        
-        return new self($truncatedSlug . '-' . $suffix);
+
+        return new self($truncatedSlug.'-'.$suffix);
     }
 
     public function getValue(): string
@@ -88,15 +99,15 @@ final readonly class Slug
 
     public function withSuffix(string $suffix): self
     {
-        return new self($this->value . '-' . $suffix);
+        return new self($this->value.'-'.$suffix);
     }
 
     public function withPrefix(string $prefix): self
     {
-        return new self($prefix . '-' . $this->value);
+        return new self($prefix.'-'.$this->value);
     }
 
-    public function equals(Slug $other): bool
+    public function equals(self $other): bool
     {
         return $this->value === $other->value;
     }

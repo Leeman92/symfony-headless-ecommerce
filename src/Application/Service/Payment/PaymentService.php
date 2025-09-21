@@ -13,14 +13,19 @@ use Doctrine\ORM\EntityManagerInterface;
 use Stripe\Event;
 use Stripe\Exception\ApiErrorException;
 use Stripe\PaymentIntent;
+use Stripe\PaymentMethod;
 use Stripe\StripeObject;
+
+use function is_array;
+use function is_string;
+use function sprintf;
 
 final class PaymentService implements PaymentServiceInterface
 {
     public function __construct(
         private readonly PaymentRepositoryInterface $paymentRepository,
         private readonly StripePaymentGatewayInterface $stripeGateway,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -42,10 +47,10 @@ final class PaymentService implements PaymentServiceInterface
                     'amount' => $amount,
                     'currency' => strtolower($order->getCurrency()),
                     'metadata' => [
-                        'order_id' => $order->getId(),
+                        'order_id' => (string) $order->getId(),
                         'order_number' => (string) $order->getOrderNumber(),
                     ],
-                    'receipt_email' => $order->getCustomerEmailString(),
+                    'receipt_email' => $order->getCustomerEmailString() ?? '',
                     'description' => sprintf('Payment for order %s', $order->getOrderNumber()),
                 ]);
             } catch (ApiErrorException $exception) {
@@ -92,19 +97,15 @@ final class PaymentService implements PaymentServiceInterface
 
     public function handleWebhookEvent(Event $event): ?Payment
     {
-        $object = $event->data['object'] ?? $event->data->object ?? null;
+        $objectPayload = $event->data['object'] ?? $this->extractObjectFromEvent($event);
 
-        if (!$object instanceof PaymentIntent) {
-            if ($object instanceof StripeObject) {
-                $object = PaymentIntent::constructFrom($object->toArray());
-            }
-        }
+        $object = $this->normalizePaymentIntent($objectPayload);
 
-        if (!$object instanceof PaymentIntent) {
+        if ($object === null) {
             return null;
         }
 
-        $paymentIntentId = $object->id;
+        $paymentIntentId = $this->resolveStripeId($object->id ?? null);
         if ($paymentIntentId === null) {
             return null;
         }
@@ -118,12 +119,12 @@ final class PaymentService implements PaymentServiceInterface
 
         switch ($event->type) {
             case 'payment_intent.succeeded':
-                $payment->markAsSucceeded($object->payment_method, $this->extractPaymentMethodDetails($object));
+                $paymentMethodId = $this->resolvePaymentMethodId($object->payment_method ?? null);
+                $payment->markAsSucceeded($paymentMethodId, $this->extractPaymentMethodDetails($object));
                 $updatePerformed = true;
                 break;
             case 'payment_intent.payment_failed':
-                $failureMessage = $object->last_payment_error->message ?? 'Payment failed';
-                $failureCode = $object->last_payment_error->code ?? null;
+                [$failureMessage, $failureCode] = $this->extractFailureInformation($object->last_payment_error ?? null);
                 $payment->markAsFailed($failureMessage, $failureCode);
                 $updatePerformed = true;
                 break;
@@ -136,16 +137,19 @@ final class PaymentService implements PaymentServiceInterface
                 $updatePerformed = true;
                 break;
             default:
-                $intentStatus = $object->status;
-                if (is_string($intentStatus)) {
-                    $updatePerformed = $this->applyStripeStatus($payment, $intentStatus);
+                $status = $this->resolveStripeString($object->status ?? null);
+                if ($status !== null) {
+                    $updatePerformed = $this->applyStripeStatus($payment, $status);
                 }
                 break;
         }
 
         if ($updatePerformed) {
-            $payment->setStripePaymentMethodId($object->payment_method ?? $payment->getStripePaymentMethodId());
-            $payment->setStripeMetadata($this->stripeObjectToArray(isset($object->metadata) ? $object->metadata : null));
+            $updatedPaymentMethodId = $this->resolvePaymentMethodId($object->payment_method ?? null);
+            if ($updatedPaymentMethodId !== null) {
+                $payment->setStripePaymentMethodId($updatedPaymentMethodId);
+            }
+            $payment->setStripeMetadata($this->stripeObjectToArray($object->metadata ?? null));
             $this->paymentRepository->save($payment);
         }
 
@@ -154,11 +158,14 @@ final class PaymentService implements PaymentServiceInterface
 
     private function synchronisePaymentWithIntent(Payment $payment, PaymentIntent $intent): void
     {
-        $payment->setStripePaymentMethodId($intent->payment_method ?? null);
-        $payment->setStripeCustomerId($intent->customer ?? null);
-        $payment->setStripeMetadata($this->stripeObjectToArray(isset($intent->metadata) ? $intent->metadata : null));
+        $payment->setStripePaymentMethodId($this->resolvePaymentMethodId($intent->payment_method ?? null));
+        $payment->setStripeCustomerId($this->resolveStripeId($intent->customer ?? null));
+        $payment->setStripeMetadata($this->stripeObjectToArray($intent->metadata ?? null));
 
-        $this->applyStripeStatus($payment, $intent->status ?? '');
+        $status = $this->resolveStripeString($intent->status ?? null);
+        if ($status !== null) {
+            $this->applyStripeStatus($payment, $status);
+        }
     }
 
     private function applyStripeStatus(Payment $payment, string $status): bool
@@ -178,16 +185,19 @@ final class PaymentService implements PaymentServiceInterface
      */
     private function extractPaymentMethodDetails(PaymentIntent $intent): ?array
     {
-        if (!isset($intent->charges) || !isset($intent->charges->data[0])) {
+        $payload = $intent->toArray();
+        $charge = $payload['charges']['data'][0] ?? null;
+
+        if (!is_array($charge)) {
             return null;
         }
 
-        $charge = $intent->charges->data[0];
-        if (isset($charge->payment_method_details)) {
-            return $this->stripeObjectToArray($charge->payment_method_details);
+        $details = $charge['payment_method_details'] ?? null;
+        if ($details instanceof StripeObject) {
+            return $details->toArray();
         }
 
-        return null;
+        return is_array($details) ? $details : null;
     }
 
     /**
@@ -210,16 +220,88 @@ final class PaymentService implements PaymentServiceInterface
         return null;
     }
 
-    private function runInTransaction(callable $operation)
+    /**
+     * @template TReturn
+     * @param callable():TReturn $operation
+     * @return TReturn
+     */
+    private function runInTransaction(callable $operation): mixed
     {
-        if (is_callable([$this->entityManager, 'wrapInTransaction'])) {
-            return $this->entityManager->wrapInTransaction(static function () use ($operation) {
-                return $operation();
-            });
+        return $this->entityManager->wrapInTransaction(static fn () => $operation());
+    }
+
+    private function normalizePaymentIntent(mixed $payload): ?PaymentIntent
+    {
+        if ($payload instanceof PaymentIntent) {
+            return $payload;
         }
 
-        return $this->entityManager->transactional(static function () use ($operation) {
-            return $operation();
-        });
+        if ($payload instanceof StripeObject) {
+            return PaymentIntent::constructFrom($payload->toArray());
+        }
+
+        if (is_array($payload)) {
+            return PaymentIntent::constructFrom($payload);
+        }
+
+        return null;
+    }
+
+    private function resolvePaymentMethodId(mixed $paymentMethod): ?string
+    {
+        if ($paymentMethod instanceof PaymentMethod) {
+            return $paymentMethod->id;
+        }
+
+        if ($paymentMethod instanceof StripeObject) {
+            $data = $paymentMethod->toArray();
+
+            return isset($data['id']) && is_string($data['id']) ? $data['id'] : null;
+        }
+
+        return is_string($paymentMethod) ? $paymentMethod : null;
+    }
+
+    private function extractObjectFromEvent(Event $event): mixed
+    {
+        $payload = $event->data->toArray();
+
+        return $payload['object'] ?? $payload;
+    }
+
+    /**
+     * @param array<string, mixed>|StripeObject|null $error
+     * @return array{0: string, 1: string|null}
+     */
+    private function extractFailureInformation(mixed $error): array
+    {
+        if ($error === null) {
+            return ['Payment failed', null];
+        }
+
+        if ($error instanceof StripeObject) {
+            $error = $error->toArray();
+        }
+
+        $message = $error['message'] ?? 'Payment failed';
+        $code = $error['code'] ?? null;
+
+        return [is_string($message) ? $message : 'Payment failed', is_string($code) ? $code : null];
+    }
+
+    private function resolveStripeId(mixed $value): ?string
+    {
+        if ($value instanceof StripeObject) {
+            $data = $value->toArray();
+
+            return isset($data['id']) && is_string($data['id']) ? $data['id'] : null;
+        }
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private function resolveStripeString(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }
