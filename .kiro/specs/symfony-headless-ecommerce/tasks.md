@@ -83,15 +83,15 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Write unit tests for payment processing logic
   - _Requirements: 1.4, 6.1_
 
-- [ ] 5. Create REST API controllers
-- [ ] 5.1 Implement Product API controller
+- [x] 5. Create REST API controllers
+- [x] 5.1 Implement Product API controller
   - Create ProductController with CRUD endpoints
   - Implement product listing with intentional performance issues
   - Add product search and filtering endpoints
   - Write functional tests for product API endpoints
   - _Requirements: 1.1, 1.2, 3.1, 3.2_
 
-- [ ] 5.2 Implement Order API controller with guest checkout
+- [x] 5.2 Implement Order API controller with guest checkout
   - Create OrderController with order management endpoints
   - Implement guest checkout endpoint (no authentication required)
   - Add user checkout endpoint (authentication required)
@@ -100,29 +100,29 @@ Convert the feature design into a series of prompts for a code-generation LLM th
   - Write functional tests for both guest and user order workflows
   - _Requirements: 1.4, 2.1, 3.1, 3.2_
 
-- [ ] 5.3 Implement Payment API controller
+- [x] 5.3 Implement Payment API controller
   - Create PaymentController with Stripe webhook handling
   - Implement payment status endpoints
   - Add payment confirmation and error handling
   - Write functional tests for payment API endpoints
   - _Requirements: 1.4, 6.1, 3.1_
 
-- [ ] 6. Add authentication and authorization
-- [ ] 6.1 Implement JWT authentication system
+- [x] 6. Add authentication and authorization
+- [x] 6.1 Implement JWT authentication system
   - Configure LexikJWTAuthenticationBundle
   - Create authentication endpoints (login, register, refresh)
   - Implement JWT token generation and validation
   - Write functional tests for authentication flow
   - _Requirements: 6.1, 6.2, 3.3_
 
-- [ ] 6.2 Implement role-based authorization
+- [x] 6.2 Implement role-based authorization
   - Create authorization voters for resource access
   - Implement admin and customer role separation
   - Add permission checks to API endpoints (skip for guest checkout)
   - Write functional tests for authorization rules
   - _Requirements: 2.2, 6.2, 6.5_
 
-- [ ] 6.3 Implement guest-to-user account conversion
+- [x] 6.3 Implement guest-to-user account conversion
   - Create service for converting guest orders to user accounts
   - Implement account creation from guest checkout data
   - Add order ownership transfer functionality

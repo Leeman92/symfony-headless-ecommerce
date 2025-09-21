@@ -9,9 +9,10 @@ use App\Domain\Entity\Order;
 use App\Domain\Entity\User;
 use App\Domain\Exception\EcommerceException;
 use App\Domain\Repository\OrderRepositoryInterface;
-use App\Domain\ValueObject\Email;
+use App\Domain\Security\UserRoles;
 use App\Infrastructure\Controller\Request\OrderRequestMapper;
 use App\Infrastructure\Controller\Transformer\OrderTransformer;
+use App\Infrastructure\Security\Voter\OrderVoter;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use JsonException;
@@ -28,7 +29,6 @@ use function in_array;
 use function is_array;
 use function is_string;
 use function sprintf;
-use function strcasecmp;
 
 use const DATE_ATOM;
 use const JSON_THROW_ON_ERROR;
@@ -60,7 +60,7 @@ final class OrderController extends AbstractController
     }
 
     #[Route('', name: 'create_user_order', methods: ['POST'])]
-    #[IsGranted('ROLE_USER')]
+    #[IsGranted(UserRoles::CUSTOMER)]
     public function createUserOrder(Request $request): JsonResponse
     {
         $user = $this->requireUser();
@@ -79,7 +79,7 @@ final class OrderController extends AbstractController
     }
 
     #[Route('', name: 'list_user_orders', methods: ['GET'])]
-    #[IsGranted('ROLE_USER')]
+    #[IsGranted(UserRoles::CUSTOMER)]
     public function listUserOrders(Request $request): JsonResponse
     {
         $user = $this->requireUser();
@@ -103,25 +103,22 @@ final class OrderController extends AbstractController
         $order = $this->findOrderOr404($orderNumber);
         $user = $this->getUser();
 
-        if ($order->isUserOrder()) {
-            if (!$this->canViewUserOrder($order, $user)) {
-                return $this->jsonError('You do not have access to this order', Response::HTTP_FORBIDDEN);
-            }
-        } else {
-            $email = $request->query->get('guest_email');
-            if (!$this->isGuestAccessValid($order, $email) && !$this->isGranted('ROLE_ADMIN')) {
-                return $this->jsonError('Guest email verification failed for this order', Response::HTTP_FORBIDDEN);
-            }
-        }
+        $guestEmail = $request->query->get('guest_email');
+        $context = [
+            'order' => $order,
+            'guest_email' => is_string($guestEmail) ? $guestEmail : null,
+        ];
+
+        $this->denyAccessUnlessGranted(OrderVoter::VIEW, $context);
 
         return $this->json(['data' => OrderTransformer::toArray($order)]);
     }
 
     #[Route('/{orderNumber}/convert', name: 'convert_guest_order', methods: ['POST'])]
-    #[IsGranted('ROLE_USER')]
     public function convertGuestOrder(string $orderNumber): JsonResponse
     {
         $order = $this->findOrderOr404($orderNumber);
+        $this->denyAccessUnlessGranted(OrderVoter::CONVERT, $order);
         $user = $this->requireUser();
 
         try {
@@ -136,10 +133,11 @@ final class OrderController extends AbstractController
     }
 
     #[Route('/{orderNumber}/status', name: 'update_status', methods: ['PATCH'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted(UserRoles::ADMIN)]
     public function updateStatus(string $orderNumber, Request $request): JsonResponse
     {
         $order = $this->findOrderOr404($orderNumber);
+        $this->denyAccessUnlessGranted(OrderVoter::UPDATE_STATUS, $order);
 
         try {
             $payload = $this->decodeJson($request);
@@ -236,44 +234,6 @@ final class OrderController extends AbstractController
         }
 
         return $order;
-    }
-
-    private function canViewUserOrder(Order $order, mixed $user): bool
-    {
-        if (!$user instanceof User) {
-            return $this->isGranted('ROLE_ADMIN');
-        }
-
-        if ($this->isGranted('ROLE_ADMIN')) {
-            return true;
-        }
-
-        $customer = $order->getCustomer();
-        if (!$customer instanceof User) {
-            return false;
-        }
-
-        return $customer->getId() === $user->getId();
-    }
-
-    private function isGuestAccessValid(Order $order, mixed $email): bool
-    {
-        if ($email === null || $email === '') {
-            return false;
-        }
-
-        $guestEmail = $order->getGuestEmail();
-        if ($guestEmail === null) {
-            return false;
-        }
-
-        try {
-            $normalized = new Email((string) $email);
-        } catch (InvalidArgumentException) {
-            return false;
-        }
-
-        return strcasecmp($guestEmail->getValue(), $normalized->getValue()) === 0;
     }
 
     private function extractLimit(Request $request): int

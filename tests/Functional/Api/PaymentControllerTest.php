@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Api;
 use App\Domain\Entity\Category;
 use App\Domain\Entity\Product;
 use App\Domain\Entity\User;
+use App\Domain\Security\UserRoles;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
@@ -174,6 +175,7 @@ final class PaymentControllerTest extends ApiTestCase
     private function createUser(string $email): User
     {
         $user = new User($email, 'Test', 'User', 'password');
+        $user->setRoles(UserRoles::defaultForCustomer());
         $this->entityManager?->persist($user);
         $this->entityManager?->flush();
 
