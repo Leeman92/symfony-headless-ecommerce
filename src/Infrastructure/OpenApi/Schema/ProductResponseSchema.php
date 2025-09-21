@@ -10,8 +10,8 @@ use OpenApi\Attributes as OA;
     schema: 'ProductResponse',
     required: ['data'],
     properties: [
-        new OA\Property(property: 'data', ref: '#/components/schemas/Product'),
-    ]
+        new OA\Property(property: 'data', ref: '#App/Infrastructure/OpenApi/Schema/Product'),
+    ],
 )]
 final class ProductResponseSchema
 {

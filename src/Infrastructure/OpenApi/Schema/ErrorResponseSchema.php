@@ -17,9 +17,9 @@ use OpenApi\Attributes as OA;
             properties: [
                 new OA\Property(property: 'message', type: 'string', example: 'Invalid request payload'),
                 new OA\Property(property: 'status', type: 'integer', example: 400),
-            ]
+            ],
         ),
-    ]
+    ],
 )]
 final class ErrorResponseSchema
 {

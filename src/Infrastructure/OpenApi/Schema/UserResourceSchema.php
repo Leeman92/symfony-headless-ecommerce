@@ -17,7 +17,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_CUSTOMER']),
         new OA\Property(property: 'is_active', type: 'boolean', example: true),
         new OA\Property(property: 'is_verified', type: 'boolean', example: false),
-    ]
+    ],
 )]
 final class UserResourceSchema
 {

@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'first_name', type: 'string', example: 'Ada'),
         new OA\Property(property: 'last_name', type: 'string', example: 'Lovelace'),
         new OA\Property(property: 'full_name', type: 'string', example: 'Ada Lovelace'),
-    ]
+    ],
 )]
 final class OrderCustomerUserSchema
 {

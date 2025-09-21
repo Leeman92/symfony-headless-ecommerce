@@ -5,7 +5,7 @@ The platform ships with fully described OpenAPI 3.1 definitions exposed through 
 ## Accessing the Swagger UI
 
 1. Boot the stack with `make start` (after running `make setup` and `make build` once).
-2. Navigate to https://traditional.ecommerce.localhost/api/doc.
+2. Navigate to https://traditional.ecommerce.localhost/api/doc (the UI is served locally but loads Swagger assets from the unpkg CDN).
 3. Accept the self-signed certificate when prompted.
 4. Use the **Authorize** button to paste your JWT (`Bearer <token>`). Protected endpoints will then include live response examples.
 

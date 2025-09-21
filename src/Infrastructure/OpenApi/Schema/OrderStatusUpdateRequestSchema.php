@@ -15,7 +15,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'confirmed_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'shipped_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'delivered_at', type: 'string', format: 'date-time', nullable: true),
-    ]
+    ],
 )]
 final class OrderStatusUpdateRequestSchema
 {

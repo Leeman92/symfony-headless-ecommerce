@@ -10,8 +10,8 @@ use OpenApi\Attributes as OA;
     schema: 'PaymentResponse',
     required: ['data'],
     properties: [
-        new OA\Property(property: 'data', ref: '#/components/schemas/Payment'),
-    ]
+        new OA\Property(property: 'data', ref: '#App/Infrastructure/OpenApi/Schema/Payment'),
+    ],
 )]
 final class PaymentResponseSchema
 {

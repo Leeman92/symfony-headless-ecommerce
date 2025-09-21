@@ -12,7 +12,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', type: 'integer', nullable: true, example: 3),
         new OA\Property(property: 'name', type: 'string', nullable: true, example: 'Outerwear'),
         new OA\Property(property: 'slug', type: 'string', nullable: true, example: 'outerwear'),
-    ]
+    ],
 )]
 final class CategorySummarySchema
 {

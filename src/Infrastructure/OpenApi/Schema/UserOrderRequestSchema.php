@@ -9,8 +9,8 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'UserOrderRequest',
     allOf: [
-        new OA\Schema(ref: '#/components/schemas/OrderDraftRequest'),
-    ]
+        new OA\Schema(ref: '#App/Infrastructure/OpenApi/Schema/OrderDraftRequest'),
+    ],
 )]
 final class UserOrderRequestSchema
 {

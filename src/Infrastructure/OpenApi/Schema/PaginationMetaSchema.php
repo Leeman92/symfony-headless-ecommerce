@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'total_pages', type: 'integer', example: 7),
         new OA\Property(property: 'has_next', type: 'boolean', example: true),
         new OA\Property(property: 'has_previous', type: 'boolean', example: false),
-    ]
+    ],
 )]
 final class PaginationMetaSchema
 {

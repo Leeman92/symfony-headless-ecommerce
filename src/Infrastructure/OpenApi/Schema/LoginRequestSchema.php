@@ -12,7 +12,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'username', type: 'string', example: 'user@example.com'),
         new OA\Property(property: 'password', type: 'string', example: 'secret'),
-    ]
+    ],
 )]
 final class LoginRequestSchema
 {

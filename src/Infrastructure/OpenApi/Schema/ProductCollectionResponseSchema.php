@@ -13,10 +13,10 @@ use OpenApi\Attributes as OA;
         new OA\Property(
             property: 'data',
             type: 'array',
-            items: new OA\Items(ref: '#/components/schemas/Product')
+            items: new OA\Items(ref: '#App/Infrastructure/OpenApi/Schema/Product'),
         ),
-        new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
-    ]
+        new OA\Property(property: 'meta', ref: '#App/Infrastructure/OpenApi/Schema/PaginationMeta'),
+    ],
 )]
 final class ProductCollectionResponseSchema
 {

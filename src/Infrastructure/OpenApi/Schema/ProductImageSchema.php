@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'alt', type: 'string', nullable: true, example: 'Red hoodie on hanger'),
         new OA\Property(property: 'is_primary', type: 'boolean', example: true),
         new OA\Property(property: 'position', type: 'integer', example: 1),
-    ]
+    ],
 )]
 final class ProductImageSchema
 {

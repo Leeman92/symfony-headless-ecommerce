@@ -15,7 +15,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'state', type: 'string', example: 'TX'),
         new OA\Property(property: 'postal_code', type: 'string', example: '73301'),
         new OA\Property(property: 'country', type: 'string', example: 'US'),
-    ]
+    ],
 )]
 final class AddressSchema
 {

@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'last_name', type: 'string', nullable: true, example: 'Taylor'),
         new OA\Property(property: 'full_name', type: 'string', nullable: true, example: 'Sam Taylor'),
         new OA\Property(property: 'phone', type: 'string', nullable: true, example: '+1-555-000-1234'),
-    ]
+    ],
 )]
 final class OrderCustomerGuestSchema
 {

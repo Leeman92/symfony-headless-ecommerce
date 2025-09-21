@@ -11,7 +11,7 @@ use OpenApi\Attributes as OA;
     required: ['token'],
     properties: [
         new OA\Property(property: 'token', type: 'string', example: 'eyJ0eXAiOiJKV1QiLCJhbGciOi...'),
-    ]
+    ],
 )]
 final class LoginResponseSchema
 {

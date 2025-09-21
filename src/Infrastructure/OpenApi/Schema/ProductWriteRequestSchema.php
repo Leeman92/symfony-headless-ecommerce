@@ -20,9 +20,9 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: 'amount', type: 'string', example: '9900'),
                 new OA\Property(property: 'currency', type: 'string', example: 'USD'),
             ],
-            description: 'Money payload. Accepts string amounts but object format is recommended.'
+            description: 'Money payload. Accepts string amounts but object format is recommended.',
         ),
-        new OA\Property(property: 'compare_price', type: 'object', nullable: true, ref: '#/components/schemas/Money'),
+        new OA\Property(property: 'compare_price', type: 'object', nullable: true, ref: '#App/Infrastructure/OpenApi/Schema/Money'),
         new OA\Property(property: 'currency', type: 'string', nullable: true, example: 'USD', description: 'Optional currency hint when price is provided as a scalar.'),
         new OA\Property(property: 'category_id', type: 'integer', nullable: true, example: 3, description: 'Provide either category_id or category_slug (or category.id/category.slug) to assign a category.'),
         new OA\Property(property: 'category_slug', type: 'string', nullable: true, example: 'outerwear'),
@@ -33,7 +33,7 @@ use OpenApi\Attributes as OA;
             properties: [
                 new OA\Property(property: 'id', type: 'integer', nullable: true, example: 3),
                 new OA\Property(property: 'slug', type: 'string', nullable: true, example: 'outerwear'),
-            ]
+            ],
         ),
         new OA\Property(property: 'description', type: 'string', nullable: true),
         new OA\Property(property: 'short_description', type: 'string', nullable: true),
@@ -54,14 +54,14 @@ use OpenApi\Attributes as OA;
                 properties: [
                     new OA\Property(property: 'sku', type: 'string', example: 'HOODIE-001-RED-M'),
                     new OA\Property(property: 'name', type: 'string', nullable: true),
-                    new OA\Property(property: 'price', ref: '#/components/schemas/Money', nullable: true),
-                    new OA\Property(property: 'compare_price', ref: '#/components/schemas/Money', nullable: true),
+                    new OA\Property(property: 'price', ref: '#App/Infrastructure/OpenApi/Schema/Money', nullable: true),
+                    new OA\Property(property: 'compare_price', ref: '#App/Infrastructure/OpenApi/Schema/Money', nullable: true),
                     new OA\Property(property: 'stock', type: 'integer', nullable: true, example: 10),
                     new OA\Property(property: 'is_default', type: 'boolean', nullable: true, example: true),
                     new OA\Property(property: 'position', type: 'integer', nullable: true, example: 0),
                     new OA\Property(property: 'attributes', type: 'object', nullable: true, example: ['size' => 'M', 'color' => 'red']),
-                ]
-            )
+                ],
+            ),
         ),
         new OA\Property(
             property: 'images',
@@ -77,17 +77,17 @@ use OpenApi\Attributes as OA;
                     new OA\Property(property: 'alt', type: 'string', nullable: true),
                     new OA\Property(property: 'is_primary', type: 'boolean', nullable: true),
                     new OA\Property(property: 'position', type: 'integer', nullable: true),
-                ]
-            )
+                ],
+            ),
         ),
-        new OA\Property(property: 'seo', ref: '#/components/schemas/ProductSeo', nullable: true),
+        new OA\Property(property: 'seo', ref: '#App/Infrastructure/OpenApi/Schema/ProductSeo', nullable: true),
         new OA\Property(
             property: 'metadata',
             type: 'object',
             nullable: true,
-            description: 'Optional metadata bag for integrations.'
+            description: 'Optional metadata bag for integrations.',
         ),
-    ]
+    ],
 )]
 final class ProductWriteRequestSchema
 {

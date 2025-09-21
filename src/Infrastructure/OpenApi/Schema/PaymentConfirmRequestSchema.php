@@ -10,7 +10,7 @@ use OpenApi\Attributes as OA;
     schema: 'PaymentConfirmRequest',
     properties: [
         new OA\Property(property: 'payment_method_id', type: 'string', nullable: true, example: 'pm_12345'),
-    ]
+    ],
 )]
 final class PaymentConfirmRequestSchema
 {

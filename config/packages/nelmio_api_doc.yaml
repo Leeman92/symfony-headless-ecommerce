@@ -22,20 +22,17 @@ nelmio_api_doc:
                         content:
                             application/json:
                                 schema:
-                                    $ref: '#/components/schemas/LoginRequest'
+                                    $ref: '#App/Infrastructure/OpenApi/Schema/LoginRequest'
                     responses:
                         '200':
                             description: 'Authentication succeeded.'
                             content:
                                 application/json:
                                     schema:
-                                        $ref: '#/components/schemas/LoginResponse'
+                                        $ref: '#App/Infrastructure/OpenApi/Schema/LoginResponse'
                         '401':
                             description: 'Invalid credentials or inactive account.'
                             content:
                                 application/json:
                                     schema:
-                                        $ref: '#/components/schemas/ErrorResponse'
-    areas: # to filter documented areas
-        path_patterns:
-            - ^/api(?!/doc$) # Accepts routes under /api except /api/doc
+                                        $ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse'

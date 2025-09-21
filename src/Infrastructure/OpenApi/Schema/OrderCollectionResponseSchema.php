@@ -13,7 +13,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(
             property: 'data',
             type: 'array',
-            items: new OA\Items(ref: '#/components/schemas/Order')
+            items: new OA\Items(ref: '#App/Infrastructure/OpenApi/Schema/Order'),
         ),
         new OA\Property(
             property: 'meta',
@@ -22,9 +22,9 @@ use OpenApi\Attributes as OA;
             properties: [
                 new OA\Property(property: 'limit', type: 'integer', example: 10),
                 new OA\Property(property: 'count', type: 'integer', example: 2),
-            ]
+            ],
         ),
-    ]
+    ],
 )]
 final class OrderCollectionResponseSchema
 {

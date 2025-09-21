@@ -10,9 +10,9 @@ use OpenApi\Attributes as OA;
     schema: 'PaymentWebhookResponse',
     required: ['received'],
     properties: [
-        new OA\Property(property: 'data', ref: '#/components/schemas/Payment', nullable: true),
+        new OA\Property(property: 'data', ref: '#App/Infrastructure/OpenApi/Schema/Payment', nullable: true),
         new OA\Property(property: 'received', type: 'boolean', example: true),
-    ]
+    ],
 )]
 final class PaymentWebhookResponseSchema
 {

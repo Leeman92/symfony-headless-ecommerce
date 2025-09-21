@@ -15,9 +15,9 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'product_name', type: 'string', example: 'Performance Hoodie'),
         new OA\Property(property: 'product_sku', type: 'string', nullable: true, example: 'HOODIE-001'),
         new OA\Property(property: 'quantity', type: 'integer', example: 2),
-        new OA\Property(property: 'unit_price', ref: '#/components/schemas/Money'),
-        new OA\Property(property: 'total_price', ref: '#/components/schemas/Money'),
-    ]
+        new OA\Property(property: 'unit_price', ref: '#App/Infrastructure/OpenApi/Schema/Money'),
+        new OA\Property(property: 'total_price', ref: '#App/Infrastructure/OpenApi/Schema/Money'),
+    ],
 )]
 final class OrderItemSchema
 {

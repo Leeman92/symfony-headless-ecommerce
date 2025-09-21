@@ -15,11 +15,11 @@ use OpenApi\Attributes as OA;
             type: 'object',
             required: ['payment', 'order'],
             properties: [
-                new OA\Property(property: 'payment', ref: '#/components/schemas/Payment'),
-                new OA\Property(property: 'order', ref: '#/components/schemas/Order'),
-            ]
+                new OA\Property(property: 'payment', ref: '#App/Infrastructure/OpenApi/Schema/Payment'),
+                new OA\Property(property: 'order', ref: '#App/Infrastructure/OpenApi/Schema/Order'),
+            ],
         ),
-    ]
+    ],
 )]
 final class PaymentIntentResponseSchema
 {

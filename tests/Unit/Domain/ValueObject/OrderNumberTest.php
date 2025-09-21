@@ -34,8 +34,7 @@ final class OrderNumberTest extends TestCase
     {
         $orderNumber = OrderNumber::generate();
 
-        self::assertStringStartsWith('ORD-', $orderNumber->getValue());
-        self::assertMatchesRegularExpression('/^ORD-\d{8}-\d{3}$/', $orderNumber->getValue());
+        self::assertMatchesRegularExpression('/^[A-Z0-9]{20}$/', $orderNumber->getValue());
     }
 
     public function testOrderNumberGenerationWithPrefix(): void

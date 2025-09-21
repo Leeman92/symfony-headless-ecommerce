@@ -9,14 +9,14 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'GuestOrderRequest',
     allOf: [
-        new OA\Schema(ref: '#/components/schemas/OrderDraftRequest'),
+        new OA\Schema(ref: '#App/Infrastructure/OpenApi/Schema/OrderDraftRequest'),
         new OA\Schema(
             required: ['guest'],
             properties: [
-                new OA\Property(property: 'guest', ref: '#/components/schemas/GuestCustomerRequest'),
-            ]
+                new OA\Property(property: 'guest', ref: '#App/Infrastructure/OpenApi/Schema/GuestCustomerRequest'),
+            ],
         ),
-    ]
+    ],
 )]
 final class GuestOrderRequestSchema
 {

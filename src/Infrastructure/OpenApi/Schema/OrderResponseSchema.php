@@ -10,8 +10,8 @@ use OpenApi\Attributes as OA;
     schema: 'OrderResponse',
     required: ['data'],
     properties: [
-        new OA\Property(property: 'data', ref: '#/components/schemas/Order'),
-    ]
+        new OA\Property(property: 'data', ref: '#App/Infrastructure/OpenApi/Schema/Order'),
+    ],
 )]
 final class OrderResponseSchema
 {
