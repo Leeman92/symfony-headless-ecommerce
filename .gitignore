@@ -60,6 +60,8 @@ Thumbs.db
 /.php-cs-fixer.cache
 /phpstan.cache
 /.phpstan.result.cache
+/.phpunit.cache
+/.phpunit.result.cache
 
 # Files with secrets
 /.kiro/settings/mcp.json
