@@ -62,7 +62,7 @@ final class Order extends BaseEntity implements ValidatableInterface
     #[ORM\Column(type: OrderNumberType::NAME, length: 20, unique: true)]
     private OrderNumber $orderNumber;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\ManyToOne(targetEntity: User::class, fetch: 'EAGER')]
     #[ORM\JoinColumn(nullable: true)]
     private ?User $customer = null;
 

@@ -8,6 +8,7 @@ use App\Domain\Entity\Category;
 use App\Domain\Entity\Order;
 use App\Domain\Entity\Product;
 use App\Domain\Entity\User;
+use App\Domain\Security\UserRoles;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\ProductSku;
 use App\Domain\ValueObject\Slug;
@@ -145,6 +146,33 @@ final class OrderControllerTest extends ApiTestCase
         self::assertSame('convert@example.com', $body['data']['customer']['email']);
     }
 
+    public function testUserCannotViewAnotherUsersOrder(): void
+    {
+        $product = $this->createProduct('Speaker', 'speaker', 149.99, 5);
+        $userOne = $this->createUser('owner@example.com');
+        $this->authorize($this->createTokenForUser($userOne));
+
+        $payload = [
+            'currency' => 'USD',
+            'items' => [
+                [
+                    'product_id' => $product->getId(),
+                    'quantity' => 1,
+                ],
+            ],
+        ];
+        $orderResponse = $this->jsonRequest('POST', '/api/orders', $payload);
+        self::assertSame(Response::HTTP_CREATED, $orderResponse->getStatusCode());
+        $orderNumber = $this->decodeResponse($orderResponse)['data']['order_number'];
+
+        $otherUser = $this->createUser('other@example.com');
+        $this->authorize($this->createTokenForUser($otherUser));
+        $this->client?->request('GET', sprintf('/api/orders/%s', $orderNumber));
+        $response = $this->client?->getResponse();
+        self::assertNotNull($response);
+        self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+    }
+
     public function testUpdateStatusAsAdmin(): void
     {
         $product = $this->createProduct('Camera', 'camera', 599.99, 5);
@@ -199,8 +227,7 @@ final class OrderControllerTest extends ApiTestCase
         $this->client?->request('GET', sprintf('/api/orders/%s', $orderNumber));
         $response = $this->client?->getResponse();
         self::assertNotNull($response);
-
-        self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+        self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
     }
 
     public function testShowGuestOrderWithEmail(): void
@@ -261,7 +288,9 @@ final class OrderControllerTest extends ApiTestCase
     {
         $user = new User($email, 'Test', 'User', 'password');
         if ($admin) {
-            $user->setRoles(['ROLE_ADMIN']);
+            $user->setRoles([UserRoles::ADMIN, UserRoles::CUSTOMER]);
+        } else {
+            $user->setRoles(UserRoles::defaultForCustomer());
         }
         $this->entityManager?->persist($user);
         $this->entityManager?->flush();

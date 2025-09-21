@@ -41,6 +41,8 @@ services:
 
     App\Domain\Repository\PaymentRepositoryInterface: '@App\Infrastructure\Repository\PaymentRepository'
 
+    App\Domain\Repository\UserRepositoryInterface: '@App\Infrastructure\Repository\UserRepository'
+
     App\Application\Service\Product\ProductServiceInterface: '@App\Application\Service\Product\ProductService'
 
     App\Application\Service\Order\OrderServiceInterface: '@App\Application\Service\Order\OrderService'
@@ -48,3 +50,5 @@ services:
     App\Infrastructure\Stripe\StripePaymentGatewayInterface: '@App\Infrastructure\Stripe\StripePaymentGateway'
 
     App\Application\Service\Payment\PaymentServiceInterface: '@App\Application\Service\Payment\PaymentService'
+
+    App\Application\Service\User\UserAccountServiceInterface: '@App\Application\Service\User\UserAccountService'

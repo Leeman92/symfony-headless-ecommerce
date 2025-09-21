@@ -10,6 +10,7 @@ use App\Domain\Entity\OrderItem;
 use App\Domain\Entity\Payment;
 use App\Domain\Entity\Product;
 use App\Domain\Entity\User;
+use App\Domain\Security\UserRoles;
 use App\Domain\ValueObject\Email;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\OrderNumber;
@@ -105,7 +106,7 @@ final class OrderRepositoryTest extends DoctrineRepositoryTestCase
     private function createUser(string $email): User
     {
         $user = new User(new Email($email), new PersonName('Test', 'User'), '', 'hash');
-        $user->setRoles(['ROLE_USER']);
+        $user->setRoles(UserRoles::defaultForCustomer());
 
         $this->entityManager?->persist($user);
         $this->entityManager?->flush();

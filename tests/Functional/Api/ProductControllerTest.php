@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Api;
 use App\Domain\Entity\Category;
 use App\Domain\Entity\Product;
 use App\Domain\Entity\User;
+use App\Domain\Security\UserRoles;
 use App\Domain\ValueObject\Money;
 use App\Domain\ValueObject\Slug;
 use JsonException;
@@ -159,7 +160,7 @@ final class ProductControllerTest extends ApiTestCase
     private function createAdminToken(string $email = 'admin@example.com'): string
     {
         $user = new User($email, 'Admin', 'User', 'password');
-        $user->setRoles(['ROLE_ADMIN']);
+        $user->setRoles([UserRoles::ADMIN]);
         $this->entityManager?->persist($user);
         $this->entityManager?->flush();
 

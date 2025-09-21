@@ -8,6 +8,7 @@ use App\Application\Service\Product\ProductSearchCriteria;
 use App\Application\Service\Product\ProductServiceInterface;
 use App\Domain\Exception\EcommerceException;
 use App\Domain\Exception\ProductNotFoundException;
+use App\Domain\Security\UserRoles;
 use App\Infrastructure\Controller\Request\ProductRequestMapper;
 use App\Infrastructure\Controller\Transformer\ProductTransformer;
 use InvalidArgumentException;
@@ -86,7 +87,7 @@ final class ProductController extends AbstractController
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted(UserRoles::ADMIN)]
     public function create(Request $request): JsonResponse
     {
         try {
@@ -105,7 +106,7 @@ final class ProductController extends AbstractController
     }
 
     #[Route('/{id<\\d+>}', name: 'update', methods: ['PUT', 'PATCH'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted(UserRoles::ADMIN)]
     public function update(int $id, Request $request): JsonResponse
     {
         try {
@@ -125,7 +126,7 @@ final class ProductController extends AbstractController
     }
 
     #[Route('/{id<\\d+>}', name: 'delete', methods: ['DELETE'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted(UserRoles::ADMIN)]
     public function delete(int $id): JsonResponse
     {
         try {

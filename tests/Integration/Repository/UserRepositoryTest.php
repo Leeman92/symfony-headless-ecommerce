@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Repository;
 
 use App\Domain\Entity\User;
+use App\Domain\Security\UserRoles;
 use App\Domain\ValueObject\Email;
 use App\Domain\ValueObject\PersonName;
 use App\Infrastructure\Repository\UserRepository;
@@ -78,7 +79,7 @@ final class UserRepositoryTest extends DoctrineRepositoryTestCase
         string $email,
         string $firstName = 'Test',
         string $lastName = 'User',
-        array $roles = ['ROLE_USER'],
+        array $roles = [UserRoles::USER],
         bool $active = true,
     ): User {
         $user = new User(new Email($email), new PersonName($firstName, $lastName), '', 'hash');

@@ -28,7 +28,7 @@ use function in_array;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
 #[ORM\HasLifecycleCallbacks]
-final class User extends BaseEntity implements UserInterface, PasswordAuthenticatedUserInterface, ValidatableInterface
+class User extends BaseEntity implements UserInterface, PasswordAuthenticatedUserInterface, ValidatableInterface
 {
     use ValidatableTrait;
 
