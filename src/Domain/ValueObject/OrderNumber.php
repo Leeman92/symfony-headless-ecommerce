@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\ValueObject;
 
 use InvalidArgumentException;
+use Random\RandomException;
 
-use function date;
 use function preg_match;
 use function random_int;
 use function str_pad;
@@ -47,15 +47,12 @@ final readonly class OrderNumber
         $this->value = $orderNumber;
     }
 
+    /**
+     * @throws RandomException
+     */
     public static function generate(): self
     {
-        $year = date('Y');
-        $month = date('m');
-        $day = date('d');
-        $timestamp = time();
-        $random = str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT);
-
-        return new self("ORD-{$year}{$month}{$day}-{$random}");
+        return new self(bin2hex(random_bytes(10)));
     }
 
     public static function generateWithPrefix(string $prefix): self

@@ -17,6 +17,7 @@ use App\Infrastructure\Controller\Transformer\OrderTransformer;
 use App\Infrastructure\Controller\Transformer\PaymentTransformer;
 use InvalidArgumentException;
 use JsonException;
+use OpenApi\Attributes as OA;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -51,6 +52,21 @@ final class PaymentController extends AbstractController
         }
     }
 
+    #[OA\Post(
+        path: '/api/payments/orders/{orderNumber}/intent',
+        summary: 'Create a payment intent for an order',
+        tags: ['Payments'],
+        security: [['Bearer' => []], []],
+        parameters: [
+            new OA\Parameter(name: 'orderNumber', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'guest_email', in: 'query', required: false, description: 'Required for guest access to payments.', schema: new OA\Schema(type: 'string', format: 'email')),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_CREATED, description: 'Payment intent created.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/PaymentIntentResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Order access denied.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Order not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/orders/{orderNumber}/intent', name: 'create_intent', methods: ['POST'])]
     public function createPaymentIntent(string $orderNumber, Request $request): JsonResponse
     {
@@ -74,6 +90,21 @@ final class PaymentController extends AbstractController
         }
     }
 
+    #[OA\Get(
+        path: '/api/payments/{paymentIntentId}',
+        summary: 'Fetch payment details by Stripe payment intent id',
+        tags: ['Payments'],
+        security: [['Bearer' => []], []],
+        parameters: [
+            new OA\Parameter(name: 'paymentIntentId', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'guest_email', in: 'query', required: false, description: 'Required for guest-owned orders.', schema: new OA\Schema(type: 'string', format: 'email')),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Payment found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/PaymentResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Access denied.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Payment not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/{paymentIntentId}', name: 'show', methods: ['GET'])]
     public function show(string $paymentIntentId, Request $request): JsonResponse
     {
@@ -93,6 +124,23 @@ final class PaymentController extends AbstractController
         return $this->json(['data' => PaymentTransformer::toArray($payment)]);
     }
 
+    #[OA\Post(
+        path: '/api/payments/{paymentIntentId}/confirm',
+        summary: 'Confirm a Stripe payment intent',
+        tags: ['Payments'],
+        security: [['Bearer' => []], []],
+        parameters: [
+            new OA\Parameter(name: 'paymentIntentId', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'guest_email', in: 'query', required: false, description: 'Required for guest-owned orders.', schema: new OA\Schema(type: 'string', format: 'email')),
+        ],
+        requestBody: new OA\RequestBody(required: false, content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/PaymentConfirmRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Payment confirmed.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/PaymentResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Payment confirmation failed.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Access denied.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Payment not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/{paymentIntentId}/confirm', name: 'confirm', methods: ['POST'])]
     public function confirm(string $paymentIntentId, Request $request): JsonResponse
     {
@@ -127,6 +175,16 @@ final class PaymentController extends AbstractController
         }
     }
 
+    #[OA\Post(
+        path: '/api/payments/webhook',
+        summary: 'Stripe webhook endpoint',
+        tags: ['Payments'],
+        requestBody: new OA\RequestBody(description: 'Stripe event payload forwarded from Stripe.', required: true, content: new OA\JsonContent(type: 'object')),
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Webhook processed.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/PaymentWebhookResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Signature verification failed.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/webhook', name: 'webhook', methods: ['POST'])]
     public function webhook(Request $request): JsonResponse
     {

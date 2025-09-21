@@ -13,6 +13,7 @@ use App\Infrastructure\Controller\Request\ProductRequestMapper;
 use App\Infrastructure\Controller\Transformer\ProductTransformer;
 use InvalidArgumentException;
 use JsonException;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +35,21 @@ final class ProductController extends AbstractController
     ) {
     }
 
+    #[OA\Get(
+        path: '/api/products',
+        summary: 'List products',
+        tags: ['Products'],
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', description: 'Page number (1-indexed).', schema: new OA\Schema(type: 'integer', minimum: 1)),
+            new OA\Parameter(name: 'limit', in: 'query', description: 'Maximum results per page (1-100).', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100)),
+            new OA\Parameter(name: 'term', in: 'query', description: 'Full-text search term matched against name and description.', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'category', in: 'query', description: 'Filter products by category slug.', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Products returned successfully.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductCollectionResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Invalid filtering parameters.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
@@ -62,6 +78,18 @@ final class ProductController extends AbstractController
         }
     }
 
+    #[OA\Get(
+        path: '/api/products/{id}',
+        summary: 'Fetch a product by numeric identifier',
+        tags: ['Products'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, description: 'Numeric product identifier.', schema: new OA\Schema(type: 'integer', minimum: 1)),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Product found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Product not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/{id<\\d+>}', name: 'show', methods: ['GET'])]
     public function show(int $id): JsonResponse
     {
@@ -74,6 +102,18 @@ final class ProductController extends AbstractController
         }
     }
 
+    #[OA\Get(
+        path: '/api/products/slug/{slug}',
+        summary: 'Fetch a product by slug',
+        tags: ['Products'],
+        parameters: [
+            new OA\Parameter(name: 'slug', in: 'path', required: true, description: 'Product slug.', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Product found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Product not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/slug/{slug}', name: 'show_by_slug', methods: ['GET'])]
     public function showBySlug(string $slug): JsonResponse
     {
@@ -86,6 +126,19 @@ final class ProductController extends AbstractController
         }
     }
 
+    #[OA\Post(
+        path: '/api/products',
+        summary: 'Create a new product',
+        tags: ['Products'],
+        security: [['Bearer' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductWriteRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_CREATED, description: 'Product created successfully.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation error.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Only admins can manage products.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('', name: 'create', methods: ['POST'])]
     #[IsGranted(UserRoles::ADMIN)]
     public function create(Request $request): JsonResponse
@@ -105,6 +158,40 @@ final class ProductController extends AbstractController
         }
     }
 
+    #[OA\Put(
+        path: '/api/products/{id}',
+        summary: 'Replace an existing product',
+        tags: ['Products'],
+        security: [['Bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 1)),
+        ],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductWriteRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Product updated.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation error.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Product not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Only admins can manage products.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
+    #[OA\Patch(
+        path: '/api/products/{id}',
+        summary: 'Partially update an existing product',
+        tags: ['Products'],
+        security: [['Bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 1)),
+        ],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductWriteRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Product updated.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ProductResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation error.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Product not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Only admins can manage products.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/{id<\\d+>}', name: 'update', methods: ['PUT', 'PATCH'])]
     #[IsGranted(UserRoles::ADMIN)]
     public function update(int $id, Request $request): JsonResponse
@@ -125,6 +212,21 @@ final class ProductController extends AbstractController
         }
     }
 
+    #[OA\Delete(
+        path: '/api/products/{id}',
+        summary: 'Delete a product',
+        tags: ['Products'],
+        security: [['Bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 1)),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_NO_CONTENT, description: 'Product deleted.'),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Product not found.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Only admins can manage products.', content: new OA\JsonContent(ref: '#App/Infrastructure/OpenApi/Schema/ErrorResponse')),
+        ],
+    )]
     #[Route('/{id<\\d+>}', name: 'delete', methods: ['DELETE'])]
     #[IsGranted(UserRoles::ADMIN)]
     public function delete(int $id): JsonResponse
