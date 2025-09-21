@@ -17,6 +17,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,16 @@ final class OrderController extends AbstractController
     ) {
     }
 
+    #[OA\Post(
+        path: '/api/orders/guest',
+        summary: 'Create a new order as a guest customer',
+        tags: ['Orders'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/GuestOrderRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_CREATED, description: 'Guest order created.', content: new OA\JsonContent(ref: '#/components/schemas/OrderResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation failed.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('/guest', name: 'guest_checkout', methods: ['POST'])]
     public function guestCheckout(Request $request): JsonResponse
     {
@@ -59,6 +70,18 @@ final class OrderController extends AbstractController
         }
     }
 
+    #[OA\Post(
+        path: '/api/orders',
+        summary: 'Create a new order for the authenticated customer',
+        tags: ['Orders'],
+        security: [['Bearer' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/UserOrderRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_CREATED, description: 'Order created.', content: new OA\JsonContent(ref: '#/components/schemas/OrderResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation failed.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('', name: 'create_user_order', methods: ['POST'])]
     #[IsGranted(UserRoles::CUSTOMER)]
     public function createUserOrder(Request $request): JsonResponse
@@ -78,6 +101,19 @@ final class OrderController extends AbstractController
         }
     }
 
+    #[OA\Get(
+        path: '/api/orders',
+        summary: 'List recent orders for the authenticated customer',
+        tags: ['Orders'],
+        security: [['Bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'limit', in: 'query', description: 'Maximum number of orders to return (1-50).', schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 50)),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Orders returned.', content: new OA\JsonContent(ref: '#/components/schemas/OrderCollectionResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('', name: 'list_user_orders', methods: ['GET'])]
     #[IsGranted(UserRoles::CUSTOMER)]
     public function listUserOrders(Request $request): JsonResponse
@@ -97,6 +133,20 @@ final class OrderController extends AbstractController
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/orders/{orderNumber}',
+        summary: 'Fetch a single order by order number',
+        tags: ['Orders'],
+        parameters: [
+            new OA\Parameter(name: 'orderNumber', in: 'path', required: true, description: 'Order number reference.', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'guest_email', in: 'query', required: false, description: 'Required for guest access to their order.', schema: new OA\Schema(type: 'string', format: 'email')),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Order found.', content: new OA\JsonContent(ref: '#/components/schemas/OrderResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Access denied.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Order not found.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('/{orderNumber}', name: 'show', methods: ['GET'])]
     public function show(string $orderNumber, Request $request): JsonResponse
     {
@@ -114,6 +164,21 @@ final class OrderController extends AbstractController
         return $this->json(['data' => OrderTransformer::toArray($order)]);
     }
 
+    #[OA\Post(
+        path: '/api/orders/{orderNumber}/convert',
+        summary: 'Convert a guest order into the current user account',
+        tags: ['Orders'],
+        security: [['Bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'orderNumber', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Order converted.', content: new OA\JsonContent(ref: '#/components/schemas/OrderResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Conversion failed.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Access denied.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Order not found.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('/{orderNumber}/convert', name: 'convert_guest_order', methods: ['POST'])]
     public function convertGuestOrder(string $orderNumber): JsonResponse
     {
@@ -132,6 +197,22 @@ final class OrderController extends AbstractController
         }
     }
 
+    #[OA\Patch(
+        path: '/api/orders/{orderNumber}/status',
+        summary: 'Update the status of an order',
+        tags: ['Orders'],
+        security: [['Bearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'orderNumber', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/OrderStatusUpdateRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Order status updated.', content: new OA\JsonContent(ref: '#/components/schemas/OrderResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation failed.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Access denied.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Order not found.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('/{orderNumber}/status', name: 'update_status', methods: ['PATCH'])]
     #[IsGranted(UserRoles::ADMIN)]
     public function updateStatus(string $orderNumber, Request $request): JsonResponse

@@ -15,6 +15,7 @@ use JsonException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -39,6 +40,17 @@ final class AuthController extends AbstractController
     ) {
     }
 
+    #[OA\Post(
+        path: '/api/auth/register',
+        summary: 'Register a new customer account',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
+        responses: [
+            new OA\Response(response: Response::HTTP_CREATED, description: 'Registration successful.', content: new OA\JsonContent(ref: '#/components/schemas/TokenResponse')),
+            new OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Validation failed.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: Response::HTTP_CONFLICT, description: 'Email already registered.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('/register', name: 'register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
@@ -55,6 +67,16 @@ final class AuthController extends AbstractController
         }
     }
 
+    #[OA\Post(
+        path: '/api/auth/token/refresh',
+        summary: 'Refresh an existing JWT token',
+        tags: ['Authentication'],
+        security: [['Bearer' => []]],
+        responses: [
+            new OA\Response(response: Response::HTTP_OK, description: 'Token refreshed successfully.', content: new OA\JsonContent(ref: '#/components/schemas/TokenResponse')),
+            new OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Authentication required.', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     #[Route('/token/refresh', name: 'refresh', methods: ['POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function refresh(): JsonResponse

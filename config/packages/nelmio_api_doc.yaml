@@ -12,6 +12,30 @@ nelmio_api_doc:
                     bearerFormat: JWT
         security:
             - Bearer: []
+        paths:
+            /api/auth/login:
+                post:
+                    tags: ['Authentication']
+                    summary: 'Authenticate using email and password'
+                    requestBody:
+                        required: true
+                        content:
+                            application/json:
+                                schema:
+                                    $ref: '#/components/schemas/LoginRequest'
+                    responses:
+                        '200':
+                            description: 'Authentication succeeded.'
+                            content:
+                                application/json:
+                                    schema:
+                                        $ref: '#/components/schemas/LoginResponse'
+                        '401':
+                            description: 'Invalid credentials or inactive account.'
+                            content:
+                                application/json:
+                                    schema:
+                                        $ref: '#/components/schemas/ErrorResponse'
     areas: # to filter documented areas
         path_patterns:
             - ^/api(?!/doc$) # Accepts routes under /api except /api/doc

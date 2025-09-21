@@ -168,28 +168,22 @@ JWT_PASSPHRASE=your-passphrase
 
 ## 📊 API Documentation
 
-### Core Endpoints
+The OpenAPI 3.1 specification is generated with NelmioApiDocBundle and reflects every controller action plus the Symfony JSON login firewall. See [`docs/api/README.md`](docs/api/README.md) for a deeper walkthrough.
 
-#### Products
-- `GET /api/products` - List products with filtering
-- `GET /api/products/{id}` - Get product details
-- `POST /api/products` - Create product (admin)
-- `PUT /api/products/{id}` - Update product (admin)
+### Exploring the Spec
 
-#### Orders & Checkout
-- `POST /api/orders/guest` - Guest checkout
-- `POST /api/orders` - User checkout (authenticated)
-- `GET /api/orders/{id}` - Get order details
-- `POST /api/orders/{id}/convert-guest` - Convert guest to user account
+- **Swagger UI**: https://traditional.ecommerce.localhost/api/doc (accept the self-signed certificate). Use the *Authorize* button to provide `Bearer` tokens when trying protected routes.
+- **Raw JSON**: https://traditional.ecommerce.localhost/api/doc.json for contract testing, SDK generation, and CLI scripting.
+- **Authentication**: Registration and refresh endpoints return structured payloads (`TokenResponse`), while the login route is still handled by the security firewall and returns a raw token envelope.
 
-#### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Refresh JWT token
+### Endpoint Families
 
-#### Payments
-- `POST /api/payments/webhook` - Stripe webhook handler
-- `GET /api/payments/{id}/status` - Payment status
+- **Authentication** – register, login, refresh; responses expose user metadata for faster onboarding.
+- **Products** – browsing plus admin CRUD with exhaustive schemas for variants, SEO, and media.
+- **Orders** – guest and authenticated checkout, conversion, history, and administrative status updates with explicit guest-email verification rules.
+- **Payments** – Stripe intent lifecycle, confirmation, lookup, and webhook processing with mixed authentication (JWT or guest email challenge).
+
+Each operation references reusable schema classes from `src/Infrastructure/OpenApi/Schema`, so clients receive consistent error envelopes and pagination metadata.
 
 ### Guest Checkout Flow
 
@@ -202,18 +196,19 @@ curl -k -X POST https://traditional.ecommerce.localhost/api/orders/guest \
   -H "Content-Type: application/json" \
   -d '{
     "items": [{"product_id": 1, "quantity": 2}],
-    "guest_email": "customer@example.com",
-    "guest_name": "John Doe",
-    "guest_address": "123 Main St, City, State"
+    "guest": {
+      "email": "customer@example.com",
+      "first_name": "John",
+      "last_name": "Doe"
+    }
   }'
 
-# 3. Process payment with returned client_secret
-# (Frontend handles Stripe payment confirmation)
+# 3. Process payment with returned intent details
+# (Frontend handles Stripe confirmation)
 
-# 4. Optional: Convert to user account
-curl -k -X POST https://traditional.ecommerce.localhost/api/orders/{order_id}/convert-guest \
-  -H "Content-Type: application/json" \
-  -d '{"password": "secure-password"}'
+# 4. Optional: Convert to user order after authentication
+curl -k -X POST https://traditional.ecommerce.localhost/api/orders/{order_number}/convert \
+  -H "Authorization: Bearer <token>"
 ```
 
 ## 🧪 Testing
